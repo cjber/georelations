@@ -1,0 +1,15 @@
+# Stuff easy to break with updates
+torch
+torchvision
+pytorch-lightning
+hydra-core
+wandb
+streamlit
+transformers
+seqeval
+
+# Stable stuff usually backward compatible
+dvc
+python-dotenv
+matplotlib
+stqdm
