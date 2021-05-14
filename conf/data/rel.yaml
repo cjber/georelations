@@ -1,0 +1,23 @@
+datamodule:
+  _target_: src.pl_data.datamodule.DataModule
+
+  datasets:
+    train:
+      _target_: src.pl_data.dataset.CSVDataset
+      name: TrainRELData
+      path: ${oc.env:TRAIN_REL_DATASET}
+
+    val:
+      - _target_: src.pl_data.dataset.CSVDataset
+        name: ValRELData
+        path: ${oc.env:VAL_REL_DATASET}
+
+  num_workers:
+    train: 8
+    val: 4
+    test: 4
+
+  batch_size:
+    train: 2
+    val: 2
+    test: 2
