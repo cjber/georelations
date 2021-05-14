@@ -12,11 +12,17 @@
 
 ## Training
 
-- Build environment (inside venv) &gt; `make env`
+- Build environment (inside venv)
 
-- Train Model `{ger, rel}`: &gt; `make train-{model}`
+    > `make env`
 
-- Dev run `{ger, rel}`: `make dev-{model}`
+- Train Model `{ger, rel}`:
+
+    > `make train-{model}`
+
+- Dev run `{ger, rel}`:
+
+    > `make dev-{model}`
 
 The GER model is a BERT-based token classification model while the
 relation classification model is based on
