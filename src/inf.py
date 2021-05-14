@@ -4,11 +4,10 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
 from src.common.utils import load_envs
-from src.pl_data.dataset import TextDataset
+from src.pl_data.text_dataset import TextDataset
 from src.pl_modules.ensemble import RelationEnsemble
-from src.pl_modules.model import GERModel
+from src.pl_modules.ger_model import GERModel
 from src.pl_modules.rbert_model import RBERT
-
 
 pl.seed_everything(42)
 torch.use_deterministic_algorithms(True)

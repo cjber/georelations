@@ -1,19 +1,20 @@
-# @package _group_
-
-
 datamodule:
   _target_: src.pl_data.datamodule.DataModule
 
   datasets:
     train:
-      _target_: src.pl_data.dataset.CoNLLDataset
+      _target_: src.pl_data.conll_dataset.CoNLLDataset
       name: TrainGERData
-      path: ${env:TRAIN_GER_DATASET}
+      model_name: ${oc.env:MODEL_NAME}
+      max_token_len: ${oc.env:MAX_TOKEN_LEN}
+      path: ${oc.env:TRAIN_GER_DATASET}
 
     val:
-      - _target_: src.pl_data.dataset.CoNLLDataset
+      - _target_: src.pl_data.conll_dataset.CoNLLDataset
         name: ValGERData
-        path: ${env:VAL_GER_DATASET}
+        model_name: ${oc.env:MODEL_NAME}
+        max_token_len: ${oc.env:MAX_TOKEN_LEN}
+        path: ${oc.env:VAL_GER_DATASET}
 
   num_workers:
     train: 8
@@ -24,4 +25,3 @@ datamodule:
     train: 2
     val: 2
     test: 2
-

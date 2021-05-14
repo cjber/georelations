@@ -3,7 +3,7 @@ from pytorch_lightning.metrics import Metric
 from seqeval.metrics import accuracy_score, classification_report
 from seqeval.scheme import BILOU
 
-from src.common.utils import Config
+from src.common.model_utils import Label
 
 
 class Seqeval(Metric):
@@ -34,10 +34,10 @@ class Seqeval(Metric):
             ]
 
             pred_bioul.append(
-                [Config.GER_IDX[pred] for pred in pred_seq[true_labels_idx]]
+                [Label("GER").idx[pred] for pred in pred_seq[true_labels_idx]]
             )
             target_bioul.append(
-                [Config.GER_IDX[lab] for lab in target_seq[true_labels_idx]]
+                [Label("GER").idx[lab] for lab in target_seq[true_labels_idx]]
             )
 
         report: dict = classification_report(

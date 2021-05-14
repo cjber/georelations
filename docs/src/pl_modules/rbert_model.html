@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>src.pl_modules.rbert_model API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>src.pl_modules.rbert_model</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from typing import Any, Union
+
+import hydra
+import omegaconf
+import pytorch_lightning as pl
+import torch
+import torch.nn as nn
+from torch.optim import Optimizer
+from transformers import AutoModel
+
+from src.common.model_utils import Config
+from src.common.utils import PROJECT_ROOT
+
+
+class FCLayer(nn.Module):
+    def __init__(self, input_dim, output_dim, dropout_rate=0.0, use_activation=True):
+        super(FCLayer, self).__init__()
+        self.use_activation = use_activation
+        self.dropout = nn.Dropout(dropout_rate)
+        self.linear = nn.Linear(input_dim, output_dim)
+        self.tanh = nn.Tanh()
+
+    def forward(self, x):
+        x = self.dropout(x)
+        if self.use_activation:
+            x = self.tanh(x)
+        return self.linear(x)
+
+
+class RBERT(pl.LightningModule):
+    def __init__(self, *args, **kwargs) -&gt; None:
+        super().__init__()
+        self.save_hyperparameters()
+
+        self.model = AutoModel.from_pretrained(
+            Config.MODEL_NAME,
+            num_labels=Config.REL_NUM,
+            return_dict=True,
+            output_attentions=False,
+        )
+
+        hidden_size = self.model.config.hidden_size  # type:ignore
+        dropout = self.model.config.hidden_dropout_prob  # type:ignore
+        self.cls_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
+        self.entity_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
+        self.label_classifier = FCLayer(
+            hidden_size * 3,
+            Config.REL_NUM,
+            dropout,
+            use_activation=False,
+        )
+
+        self.train_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
+        self.valid_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
+
+    @staticmethod
+    def entity_average(hidden_output, e_mask):
+        &#34;&#34;&#34;
+        Average the entity hidden state vectors (H_i ~ H_j)
+        :param hidden_output: [batch_size, j-i+1, dim]
+        :param e_mask: [batch_size, max_seq_len]
+                e.g. e_mask[0] == [0, 0, 0, 1, 1, 1, 0, 0, ... 0]
+        :return: [batch_size, dim]
+        &#34;&#34;&#34;
+        e_mask_unsqueeze = e_mask.unsqueeze(1)  # [b, 1, j-i+1]
+        length_tensor = (e_mask != 0).sum(dim=1).unsqueeze(1)  # [batch_size, 1]
+
+        # [b, 1, j-i+1] * [b, j-i+1, dim] = [b, 1, dim] -&gt; [b, dim]
+        sum_vector = torch.bmm(e_mask_unsqueeze.float(), hidden_output).squeeze(1)
+        avg_vector = sum_vector.float() / length_tensor.float()  # broadcasting
+        return avg_vector
+
+    def forward(
+        self, input_ids, attention_mask, token_type_ids, labels, e1_mask, e2_mask
+    ):
+        outputs = self.model(
+            input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
+        )  # sequence_output, pooled_output, (hidden_states), (attentions)
+        sequence_output = outputs[0]
+        pooled_output = outputs[1]  # [CLS]
+
+        # Average
+        e1_h = self.entity_average(sequence_output, e1_mask)
+        e2_h = self.entity_average(sequence_output, e2_mask)
+
+        # Dropout -&gt; tanh -&gt; fc_layer (Share FC layer for e1 and e2)
+        pooled_output = self.cls_fc_layer(pooled_output)
+        e1_h = self.entity_fc_layer(e1_h)
+        e2_h = self.entity_fc_layer(e2_h)
+
+        # Concat -&gt; fc_layer
+        concat_h = torch.cat([pooled_output, e1_h, e2_h], dim=-1)
+        logits = self.label_classifier(concat_h)
+
+        # add hidden states and attention if they are here
+        outputs = (logits,) + outputs[2:]
+
+        # Softmax
+        if labels is not None:
+            if Config.REL_NUM == 1:
+                loss_fct = nn.MSELoss()
+                loss = loss_fct(logits.view(-1), labels.view(-1))
+            else:
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, Config.REL_NUM), labels.view(-1))
+
+            outputs = (loss,) + outputs
+        return outputs  # (loss), logits, (hidden_states), (attentions)
+
+    def step(self, batch: Any, batch_idx: int) -&gt; dict:
+        outputs = self(**batch)
+        loss, logits = outputs[:2]
+        softmax = nn.Softmax(dim=1)
+        probs = softmax(logits)
+        return {
+            &#34;probs&#34;: probs,
+            &#34;logits&#34;: logits,
+            &#34;loss&#34;: loss,
+        }
+
+    def training_step(self, batch: Any, batch_idx: int) -&gt; dict:
+        step_out = self.step(batch, batch_idx)
+        train_f1 = self.train_f1(step_out[&#34;probs&#34;], batch[&#34;labels&#34;])
+
+        self.log(&#34;train_loss&#34;, step_out[&#34;loss&#34;])
+        self.log(&#34;train_f1&#34;, train_f1, prog_bar=True)
+        return {&#34;loss&#34;: step_out[&#34;loss&#34;], &#34;train_accuracy&#34;: train_f1}
+
+    def validation_step(self, batch: Any, batch_idx: int) -&gt; dict:
+        step_out = self.step(batch, batch_idx)
+        val_f1 = self.valid_f1(step_out[&#34;probs&#34;], batch[&#34;labels&#34;])
+
+        self.log(&#34;val_loss&#34;, step_out[&#34;loss&#34;])
+        self.log(&#34;val_f1&#34;, val_f1)
+        return {&#34;val_loss&#34;: step_out[&#34;loss&#34;], &#34;val_accuracy&#34;: val_f1}
+
+    def configure_optimizers(self) -&gt; Union[Optimizer, dict]:
+        param_optimizer = list(self.model.named_parameters())
+        no_decay = [&#34;bias&#34;, &#34;gamma&#34;, &#34;beta&#34;]
+        optimizer_grouped_parameters = [
+            {
+                &#34;params&#34;: [
+                    p for n, p in param_optimizer if all(nd not in n for nd in no_decay)
+                ],
+                &#34;weight_decay_rate&#34;: 0.01,
+            },
+            {
+                &#34;params&#34;: [
+                    p for n, p in param_optimizer if any(nd in n for nd in no_decay)
+                ],
+                &#34;weight_decay_rate&#34;: 0.0,
+            },
+        ]
+
+        opt = hydra.utils.instantiate(
+            self.cfg.optim.optimizer, params=optimizer_grouped_parameters
+        )
+
+        if self.cfg.optim.use_lr_scheduler:
+            scheduler = hydra.utils.instantiate(
+                self.cfg.optim.lr_scheduler, optimizer=opt
+            )
+            return {
+                &#34;optimizer&#34;: opt,
+                &#34;lr_scheduler&#34;: scheduler,
+                &#34;monitor&#34;: self.cfg.train.monitor_metric,
+            }
+
+        return opt
+
+
+@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;rel&#34;)
+def main(cfg: omegaconf.DictConfig):
+    model: pl.LightningModule = hydra.utils.instantiate(
+        cfg.model,
+        optim=cfg.optim,
+        data=cfg.data,
+        logging=cfg.logging,
+        _recursive_=False,
+    )
+
+
+if __name__ == &#34;__main__&#34;:
+    main()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="src.pl_modules.rbert_model.main"><code class="name flex">
+<span>def <span class="ident">main</span></span>(<span>cfg: omegaconf.dictconfig.DictConfig)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;rel&#34;)
+def main(cfg: omegaconf.DictConfig):
+    model: pl.LightningModule = hydra.utils.instantiate(
+        cfg.model,
+        optim=cfg.optim,
+        data=cfg.data,
+        logging=cfg.logging,
+        _recursive_=False,
+    )</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="src.pl_modules.rbert_model.FCLayer"><code class="flex name class">
+<span>class <span class="ident">FCLayer</span></span>
+<span>(</span><span>input_dim, output_dim, dropout_rate=0.0, use_activation=True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Base class for all neural network modules.</p>
+<p>Your models should also subclass this class.</p>
+<p>Modules can also contain other Modules, allowing to nest them in
+a tree structure. You can assign the submodules as regular attributes::</p>
+<pre><code>import torch.nn as nn
+import torch.nn.functional as F
+
+class Model(nn.Module):
+    def __init__(self):
+        super(Model, self).__init__()
+        self.conv1 = nn.Conv2d(1, 20, 5)
+        self.conv2 = nn.Conv2d(20, 20, 5)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        return F.relu(self.conv2(x))
+</code></pre>
+<p>Submodules assigned in this way will be registered, and will have their
+parameters converted too when you call :meth:<code>to</code>, etc.</p>
+<p>:ivar training: Boolean represents whether this module is in training or
+evaluation mode.
+:vartype training: bool</p>
+<p>Initializes internal Module state, shared by both nn.Module and ScriptModule.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class FCLayer(nn.Module):
+    def __init__(self, input_dim, output_dim, dropout_rate=0.0, use_activation=True):
+        super(FCLayer, self).__init__()
+        self.use_activation = use_activation
+        self.dropout = nn.Dropout(dropout_rate)
+        self.linear = nn.Linear(input_dim, output_dim)
+        self.tanh = nn.Tanh()
+
+    def forward(self, x):
+        x = self.dropout(x)
+        if self.use_activation:
+            x = self.tanh(x)
+        return self.linear(x)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>torch.nn.modules.module.Module</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="src.pl_modules.rbert_model.FCLayer.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="src.pl_modules.rbert_model.FCLayer.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="src.pl_modules.rbert_model.FCLayer.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, x) ‑> Callable[..., Any]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the :class:<code>Module</code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def forward(self, x):
+    x = self.dropout(x)
+    if self.use_activation:
+        x = self.tanh(x)
+    return self.linear(x)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="src.pl_modules.rbert_model.RBERT"><code class="flex name class">
+<span>class <span class="ident">RBERT</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Helper class that provides a standard way to create an ABC using
+inheritance.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class RBERT(pl.LightningModule):
+    def __init__(self, *args, **kwargs) -&gt; None:
+        super().__init__()
+        self.save_hyperparameters()
+
+        self.model = AutoModel.from_pretrained(
+            Config.MODEL_NAME,
+            num_labels=Config.REL_NUM,
+            return_dict=True,
+            output_attentions=False,
+        )
+
+        hidden_size = self.model.config.hidden_size  # type:ignore
+        dropout = self.model.config.hidden_dropout_prob  # type:ignore
+        self.cls_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
+        self.entity_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
+        self.label_classifier = FCLayer(
+            hidden_size * 3,
+            Config.REL_NUM,
+            dropout,
+            use_activation=False,
+        )
+
+        self.train_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
+        self.valid_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
+
+    @staticmethod
+    def entity_average(hidden_output, e_mask):
+        &#34;&#34;&#34;
+        Average the entity hidden state vectors (H_i ~ H_j)
+        :param hidden_output: [batch_size, j-i+1, dim]
+        :param e_mask: [batch_size, max_seq_len]
+                e.g. e_mask[0] == [0, 0, 0, 1, 1, 1, 0, 0, ... 0]
+        :return: [batch_size, dim]
+        &#34;&#34;&#34;
+        e_mask_unsqueeze = e_mask.unsqueeze(1)  # [b, 1, j-i+1]
+        length_tensor = (e_mask != 0).sum(dim=1).unsqueeze(1)  # [batch_size, 1]
+
+        # [b, 1, j-i+1] * [b, j-i+1, dim] = [b, 1, dim] -&gt; [b, dim]
+        sum_vector = torch.bmm(e_mask_unsqueeze.float(), hidden_output).squeeze(1)
+        avg_vector = sum_vector.float() / length_tensor.float()  # broadcasting
+        return avg_vector
+
+    def forward(
+        self, input_ids, attention_mask, token_type_ids, labels, e1_mask, e2_mask
+    ):
+        outputs = self.model(
+            input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
+        )  # sequence_output, pooled_output, (hidden_states), (attentions)
+        sequence_output = outputs[0]
+        pooled_output = outputs[1]  # [CLS]
+
+        # Average
+        e1_h = self.entity_average(sequence_output, e1_mask)
+        e2_h = self.entity_average(sequence_output, e2_mask)
+
+        # Dropout -&gt; tanh -&gt; fc_layer (Share FC layer for e1 and e2)
+        pooled_output = self.cls_fc_layer(pooled_output)
+        e1_h = self.entity_fc_layer(e1_h)
+        e2_h = self.entity_fc_layer(e2_h)
+
+        # Concat -&gt; fc_layer
+        concat_h = torch.cat([pooled_output, e1_h, e2_h], dim=-1)
+        logits = self.label_classifier(concat_h)
+
+        # add hidden states and attention if they are here
+        outputs = (logits,) + outputs[2:]
+
+        # Softmax
+        if labels is not None:
+            if Config.REL_NUM == 1:
+                loss_fct = nn.MSELoss()
+                loss = loss_fct(logits.view(-1), labels.view(-1))
+            else:
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, Config.REL_NUM), labels.view(-1))
+
+            outputs = (loss,) + outputs
+        return outputs  # (loss), logits, (hidden_states), (attentions)
+
+    def step(self, batch: Any, batch_idx: int) -&gt; dict:
+        outputs = self(**batch)
+        loss, logits = outputs[:2]
+        softmax = nn.Softmax(dim=1)
+        probs = softmax(logits)
+        return {
+            &#34;probs&#34;: probs,
+            &#34;logits&#34;: logits,
+            &#34;loss&#34;: loss,
+        }
+
+    def training_step(self, batch: Any, batch_idx: int) -&gt; dict:
+        step_out = self.step(batch, batch_idx)
+        train_f1 = self.train_f1(step_out[&#34;probs&#34;], batch[&#34;labels&#34;])
+
+        self.log(&#34;train_loss&#34;, step_out[&#34;loss&#34;])
+        self.log(&#34;train_f1&#34;, train_f1, prog_bar=True)
+        return {&#34;loss&#34;: step_out[&#34;loss&#34;], &#34;train_accuracy&#34;: train_f1}
+
+    def validation_step(self, batch: Any, batch_idx: int) -&gt; dict:
+        step_out = self.step(batch, batch_idx)
+        val_f1 = self.valid_f1(step_out[&#34;probs&#34;], batch[&#34;labels&#34;])
+
+        self.log(&#34;val_loss&#34;, step_out[&#34;loss&#34;])
+        self.log(&#34;val_f1&#34;, val_f1)
+        return {&#34;val_loss&#34;: step_out[&#34;loss&#34;], &#34;val_accuracy&#34;: val_f1}
+
+    def configure_optimizers(self) -&gt; Union[Optimizer, dict]:
+        param_optimizer = list(self.model.named_parameters())
+        no_decay = [&#34;bias&#34;, &#34;gamma&#34;, &#34;beta&#34;]
+        optimizer_grouped_parameters = [
+            {
+                &#34;params&#34;: [
+                    p for n, p in param_optimizer if all(nd not in n for nd in no_decay)
+                ],
+                &#34;weight_decay_rate&#34;: 0.01,
+            },
+            {
+                &#34;params&#34;: [
+                    p for n, p in param_optimizer if any(nd in n for nd in no_decay)
+                ],
+                &#34;weight_decay_rate&#34;: 0.0,
+            },
+        ]
+
+        opt = hydra.utils.instantiate(
+            self.cfg.optim.optimizer, params=optimizer_grouped_parameters
+        )
+
+        if self.cfg.optim.use_lr_scheduler:
+            scheduler = hydra.utils.instantiate(
+                self.cfg.optim.lr_scheduler, optimizer=opt
+            )
+            return {
+                &#34;optimizer&#34;: opt,
+                &#34;lr_scheduler&#34;: scheduler,
+                &#34;monitor&#34;: self.cfg.train.monitor_metric,
+            }
+
+        return opt</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pytorch_lightning.core.lightning.LightningModule</li>
+<li>abc.ABC</li>
+<li>pytorch_lightning.utilities.device_dtype_mixin.DeviceDtypeModuleMixin</li>
+<li>pytorch_lightning.core.grads.GradInformation</li>
+<li>pytorch_lightning.core.saving.ModelIO</li>
+<li>pytorch_lightning.core.hooks.ModelHooks</li>
+<li>pytorch_lightning.core.hooks.DataHooks</li>
+<li>pytorch_lightning.core.hooks.CheckpointHooks</li>
+<li>torch.nn.modules.module.Module</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="src.pl_modules.rbert_model.RBERT.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="src.pl_modules.rbert_model.RBERT.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Static methods</h3>
+<dl>
+<dt id="src.pl_modules.rbert_model.RBERT.entity_average"><code class="name flex">
+<span>def <span class="ident">entity_average</span></span>(<span>hidden_output, e_mask)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Average the entity hidden state vectors (H_i ~ H_j)
+:param hidden_output: [batch_size, j-i+1, dim]
+:param e_mask: [batch_size, max_seq_len]
+e.g. e_mask[0] == [0, 0, 0, 1, 1, 1, 0, 0, &hellip; 0]
+:return: [batch_size, dim]</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def entity_average(hidden_output, e_mask):
+    &#34;&#34;&#34;
+    Average the entity hidden state vectors (H_i ~ H_j)
+    :param hidden_output: [batch_size, j-i+1, dim]
+    :param e_mask: [batch_size, max_seq_len]
+            e.g. e_mask[0] == [0, 0, 0, 1, 1, 1, 0, 0, ... 0]
+    :return: [batch_size, dim]
+    &#34;&#34;&#34;
+    e_mask_unsqueeze = e_mask.unsqueeze(1)  # [b, 1, j-i+1]
+    length_tensor = (e_mask != 0).sum(dim=1).unsqueeze(1)  # [batch_size, 1]
+
+    # [b, 1, j-i+1] * [b, j-i+1, dim] = [b, 1, dim] -&gt; [b, dim]
+    sum_vector = torch.bmm(e_mask_unsqueeze.float(), hidden_output).squeeze(1)
+    avg_vector = sum_vector.float() / length_tensor.float()  # broadcasting
+    return avg_vector</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="src.pl_modules.rbert_model.RBERT.configure_optimizers"><code class="name flex">
+<span>def <span class="ident">configure_optimizers</span></span>(<span>self) ‑> Union[torch.optim.optimizer.Optimizer, dict]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Choose what optimizers and learning-rate schedulers to use in your optimization.
+Normally you'd need one. But in the case of GANs or similar you might have multiple.</p>
+<h2 id="return">Return</h2>
+<p>Any of these 6 options.</p>
+<ul>
+<li>Single optimizer.</li>
+<li>List or Tuple - List of optimizers.</li>
+<li>Two lists - The first list has multiple optimizers, the second a list of LR schedulers (or lr_dict).</li>
+<li>Dictionary, with an 'optimizer' key, and (optionally) a 'lr_scheduler'
+key whose value is a single LR scheduler or lr_dict.</li>
+<li>Tuple of dictionaries as described, with an optional 'frequency' key.</li>
+<li>None - Fit will run without any optimizer.</li>
+</ul>
+<h2 id="note">Note</h2>
+<p>The 'frequency' value is an int corresponding to the number of sequential batches
+optimized with the specific optimizer. It should be given to none or to all of the optimizers.
+There is a difference between passing multiple optimizers in a list,
+and passing multiple optimizers in dictionaries with a frequency of 1:
+In the former case, all optimizers will operate on the given batch in each optimization step.
+In the latter, only one optimizer will operate on the given batch at every step.</p>
+<p>The lr_dict is a dictionary which contains the scheduler and its associated configuration.
+The default configuration is shown below.</p>
+<p>.. code-block:: python</p>
+<pre><code>{
+    'scheduler': lr_scheduler, # The LR scheduler instance (required)
+    'interval': 'epoch', # The unit of the scheduler's step size
+    'frequency': 1, # The frequency of the scheduler
+    'reduce_on_plateau': False, # For ReduceLROnPlateau scheduler
+    'monitor': 'val_loss', # Metric for ReduceLROnPlateau to monitor
+    'strict': True, # Whether to crash the training if &lt;code&gt;monitor&lt;/code&gt; is not found
+    'name': None, # Custom name for LearningRateMonitor to use
+}
+</code></pre>
+<p>Only the <code>scheduler</code> key is required, the rest will be set to the defaults above.</p>
+<p>Examples::</p>
+<pre><code># most cases
+def configure_optimizers(self):
+    opt = Adam(self.parameters(), lr=1e-3)
+    return opt
+
+# multiple optimizer case (e.g.: GAN)
+def configure_optimizers(self):
+    generator_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    disriminator_opt = Adam(self.model_disc.parameters(), lr=0.02)
+    return generator_opt, disriminator_opt
+
+# example with learning rate schedulers
+def configure_optimizers(self):
+    generator_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    disriminator_opt = Adam(self.model_disc.parameters(), lr=0.02)
+    discriminator_sched = CosineAnnealing(discriminator_opt, T_max=10)
+    return [generator_opt, disriminator_opt], [discriminator_sched]
+
+# example with step-based learning rate schedulers
+def configure_optimizers(self):
+    gen_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    dis_opt = Adam(self.model_disc.parameters(), lr=0.02)
+    gen_sched = {'scheduler': ExponentialLR(gen_opt, 0.99),
+                 'interval': 'step'}  # called after each training step
+    dis_sched = CosineAnnealing(discriminator_opt, T_max=10) # called every epoch
+    return [gen_opt, dis_opt], [gen_sched, dis_sched]
+
+# example with optimizer frequencies
+# see training procedure in &lt;code&gt;Improved Training of Wasserstein GANs&lt;/code&gt;, Algorithm 1
+# &lt;https://arxiv.org/abs/1704.00028&gt;
+def configure_optimizers(self):
+    gen_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    dis_opt = Adam(self.model_disc.parameters(), lr=0.02)
+    n_critic = 5
+    return (
+        {'optimizer': dis_opt, 'frequency': n_critic},
+        {'optimizer': gen_opt, 'frequency': 1}
+    )
+</code></pre>
+<h2 id="note_1">Note</h2>
+<p>Some things to know:</p>
+<ul>
+<li>
+<p>Lightning calls <code>.backward()</code> and <code>.step()</code> on each optimizer
+and learning rate scheduler as needed.</p>
+</li>
+<li>
+<p>If you use 16-bit precision (<code>precision=16</code>), Lightning will automatically
+handle the optimizers for you.</p>
+</li>
+<li>
+<p>If you use multiple optimizers, :meth:<code>training_step</code> will have an additional
+<code>optimizer_idx</code> parameter.</p>
+</li>
+<li>
+<p>If you use LBFGS Lightning handles the closure function automatically for you.</p>
+</li>
+<li>
+<p>If you use multiple optimizers, gradients will be calculated only
+for the parameters of current optimizer at each training step.</p>
+</li>
+<li>
+<p>If you need to control how often those optimizers step or override the
+default <code>.step()</code> schedule, override the :meth:<code>optimizer_step</code> hook.</p>
+</li>
+<li>
+<p>If you only want to call a learning rate scheduler every <code>x</code> step or epoch,
+or want to monitor a custom metric, you can specify these in a lr_dict:</p>
+</li>
+</ul>
+<p>.. code-block:: python</p>
+<pre><code>  {
+      'scheduler': lr_scheduler,
+      'interval': 'step',  # or 'epoch'
+      'monitor': 'val_f1',
+      'frequency': x,
+  }
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def configure_optimizers(self) -&gt; Union[Optimizer, dict]:
+    param_optimizer = list(self.model.named_parameters())
+    no_decay = [&#34;bias&#34;, &#34;gamma&#34;, &#34;beta&#34;]
+    optimizer_grouped_parameters = [
+        {
+            &#34;params&#34;: [
+                p for n, p in param_optimizer if all(nd not in n for nd in no_decay)
+            ],
+            &#34;weight_decay_rate&#34;: 0.01,
+        },
+        {
+            &#34;params&#34;: [
+                p for n, p in param_optimizer if any(nd in n for nd in no_decay)
+            ],
+            &#34;weight_decay_rate&#34;: 0.0,
+        },
+    ]
+
+    opt = hydra.utils.instantiate(
+        self.cfg.optim.optimizer, params=optimizer_grouped_parameters
+    )
+
+    if self.cfg.optim.use_lr_scheduler:
+        scheduler = hydra.utils.instantiate(
+            self.cfg.optim.lr_scheduler, optimizer=opt
+        )
+        return {
+            &#34;optimizer&#34;: opt,
+            &#34;lr_scheduler&#34;: scheduler,
+            &#34;monitor&#34;: self.cfg.train.monitor_metric,
+        }
+
+    return opt</code></pre>
+</details>
+</dd>
+<dt id="src.pl_modules.rbert_model.RBERT.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, input_ids, attention_mask, token_type_ids, labels, e1_mask, e2_mask) ‑> Callable[..., Any]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Same as :meth:<code>torch.nn.Module.forward()</code>, however in Lightning you want this to define
+the operations you want to use for prediction (i.e.: on a server or as a feature extractor).</p>
+<p>Normally you'd call <code>self()</code> from your :meth:<code>training_step</code> method.
+This makes it easy to write a complex system for training with the outputs
+you'd want in a prediction setting.</p>
+<p>You may also find the :func:<code>~pytorch_lightning.core.decorators.auto_move_data</code> decorator useful
+when using the module outside Lightning in a production setting.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>*args</code></strong></dt>
+<dd>Whatever you decide to pass into the forward method.</dd>
+<dt><strong><code>**kwargs</code></strong></dt>
+<dd>Keyword arguments are also possible.</dd>
+</dl>
+<h2 id="return">Return</h2>
+<p>Predicted output</p>
+<p>Examples::</p>
+<pre><code># example if we were using this model as a feature extractor
+def forward(self, x):
+    feature_maps = self.convnet(x)
+    return feature_maps
+
+def training_step(self, batch, batch_idx):
+    x, y = batch
+    feature_maps = self(x)
+    logits = self.classifier(feature_maps)
+
+    # ...
+    return loss
+
+# splitting it this way allows model to be used a feature extractor
+model = MyModelAbove()
+
+inputs = server.get_request()
+results = model(inputs)
+server.write_results(results)
+
+# -------------
+# This is in stark contrast to torch.nn.Module where normally you would have this:
+def forward(self, batch):
+    x, y = batch
+    feature_maps = self.convnet(x)
+    logits = self.classifier(feature_maps)
+    return logits
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def forward(
+    self, input_ids, attention_mask, token_type_ids, labels, e1_mask, e2_mask
+):
+    outputs = self.model(
+        input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
+    )  # sequence_output, pooled_output, (hidden_states), (attentions)
+    sequence_output = outputs[0]
+    pooled_output = outputs[1]  # [CLS]
+
+    # Average
+    e1_h = self.entity_average(sequence_output, e1_mask)
+    e2_h = self.entity_average(sequence_output, e2_mask)
+
+    # Dropout -&gt; tanh -&gt; fc_layer (Share FC layer for e1 and e2)
+    pooled_output = self.cls_fc_layer(pooled_output)
+    e1_h = self.entity_fc_layer(e1_h)
+    e2_h = self.entity_fc_layer(e2_h)
+
+    # Concat -&gt; fc_layer
+    concat_h = torch.cat([pooled_output, e1_h, e2_h], dim=-1)
+    logits = self.label_classifier(concat_h)
+
+    # add hidden states and attention if they are here
+    outputs = (logits,) + outputs[2:]
+
+    # Softmax
+    if labels is not None:
+        if Config.REL_NUM == 1:
+            loss_fct = nn.MSELoss()
+            loss = loss_fct(logits.view(-1), labels.view(-1))
+        else:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, Config.REL_NUM), labels.view(-1))
+
+        outputs = (loss,) + outputs
+    return outputs  # (loss), logits, (hidden_states), (attentions)</code></pre>
+</details>
+</dd>
+<dt id="src.pl_modules.rbert_model.RBERT.step"><code class="name flex">
+<span>def <span class="ident">step</span></span>(<span>self, batch: Any, batch_idx: int) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def step(self, batch: Any, batch_idx: int) -&gt; dict:
+    outputs = self(**batch)
+    loss, logits = outputs[:2]
+    softmax = nn.Softmax(dim=1)
+    probs = softmax(logits)
+    return {
+        &#34;probs&#34;: probs,
+        &#34;logits&#34;: logits,
+        &#34;loss&#34;: loss,
+    }</code></pre>
+</details>
+</dd>
+<dt id="src.pl_modules.rbert_model.RBERT.training_step"><code class="name flex">
+<span>def <span class="ident">training_step</span></span>(<span>self, batch: Any, batch_idx: int) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Here you compute and return the training loss and some additional metrics for e.g.
+the progress bar or logger.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt>batch (:class:<code>~torch.Tensor</code> | (:class:<code>~torch.Tensor</code>, &hellip;) | [:class:<code>~torch.Tensor</code>, &hellip;]):</dt>
+<dt>The output of your :class:<code>~torch.utils.data.DataLoader</code>. A tensor, tuple or list.</dt>
+<dt><strong><code>batch_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>Integer displaying index of this batch</dd>
+<dt><strong><code>optimizer_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>When using multiple optimizers, this argument will also be present.</dd>
+</dl>
+<p>hiddens(:class:<code>~torch.Tensor</code>): Passed in if
+:paramref:<code>~pytorch_lightning.trainer.trainer.Trainer.truncated_bptt_steps</code> &gt; 0.</p>
+<h2 id="return">Return</h2>
+<p>Any of.</p>
+<ul>
+<li>:class:<code>~torch.Tensor</code> - The loss tensor</li>
+<li><code>dict</code> - A dictionary. Can include any keys, but must include the key <code>'loss'</code></li>
+<li><code>None</code> - Training will skip to the next batch</li>
+</ul>
+<h2 id="note">Note</h2>
+<p>Returning <code>None</code> is currently not supported for multi-GPU or TPU, or with 16-bit precision enabled.</p>
+<p>In this step you'd normally do the forward pass and calculate the loss for a batch.
+You can also do fancier things like multiple forward passes or something model specific.</p>
+<p>Example::</p>
+<pre><code>def training_step(self, batch, batch_idx):
+    x, y, z = batch
+    out = self.encoder(x)
+    loss = self.loss(out, x)
+    return loss
+</code></pre>
+<p>If you define multiple optimizers, this step will be called with an additional
+<code>optimizer_idx</code> parameter.</p>
+<p>.. code-block:: python</p>
+<pre><code># Multiple optimizers (e.g.: GANs)
+def training_step(self, batch, batch_idx, optimizer_idx):
+    if optimizer_idx == 0:
+        # do training_step with encoder
+    if optimizer_idx == 1:
+        # do training_step with decoder
+</code></pre>
+<p>If you add truncated back propagation through time you will also get an additional
+argument with the hidden states of the previous step.</p>
+<p>.. code-block:: python</p>
+<pre><code># Truncated back-propagation through time
+def training_step(self, batch, batch_idx, hiddens):
+    # hiddens are the hidden states from the previous truncated backprop step
+    ...
+    out, hiddens = self.lstm(data, hiddens)
+    ...
+    return {'loss': loss, 'hiddens': hiddens}
+</code></pre>
+<h2 id="note_1">Note</h2>
+<p>The loss value shown in the progress bar is smoothed (averaged) over the last values,
+so it differs from the actual loss returned in train/validation step.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def training_step(self, batch: Any, batch_idx: int) -&gt; dict:
+    step_out = self.step(batch, batch_idx)
+    train_f1 = self.train_f1(step_out[&#34;probs&#34;], batch[&#34;labels&#34;])
+
+    self.log(&#34;train_loss&#34;, step_out[&#34;loss&#34;])
+    self.log(&#34;train_f1&#34;, train_f1, prog_bar=True)
+    return {&#34;loss&#34;: step_out[&#34;loss&#34;], &#34;train_accuracy&#34;: train_f1}</code></pre>
+</details>
+</dd>
+<dt id="src.pl_modules.rbert_model.RBERT.validation_step"><code class="name flex">
+<span>def <span class="ident">validation_step</span></span>(<span>self, batch: Any, batch_idx: int) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Operates on a single batch of data from the validation set.
+In this step you'd might generate examples or calculate anything of interest like accuracy.</p>
+<p>.. code-block:: python</p>
+<pre><code># the pseudocode for these calls
+val_outs = []
+for val_batch in val_data:
+    out = validation_step(val_batch)
+    val_outs.append(out)
+validation_epoch_end(val_outs)
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt>batch (:class:<code>~torch.Tensor</code> | (:class:<code>~torch.Tensor</code>, &hellip;) | [:class:<code>~torch.Tensor</code>, &hellip;]):</dt>
+<dt>The output of your :class:<code>~torch.utils.data.DataLoader</code>. A tensor, tuple or list.</dt>
+<dt><strong><code>batch_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>The index of this batch</dd>
+<dt><strong><code>dataloader_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>The index of the dataloader that produced this batch
+(only if multiple val dataloaders used)</dd>
+</dl>
+<h2 id="return">Return</h2>
+<p>Any of.</p>
+<ul>
+<li>Any object or value</li>
+<li><code>None</code> - Validation will skip to the next batch</li>
+</ul>
+<p>.. code-block:: python</p>
+<pre><code># pseudocode of order
+out = validation_step()
+if defined('validation_step_end'):
+    out = validation_step_end(out)
+out = validation_epoch_end(out)
+</code></pre>
+<p>.. code-block:: python</p>
+<pre><code># if you have one val dataloader:
+def validation_step(self, batch, batch_idx)
+
+# if you have multiple val dataloaders:
+def validation_step(self, batch, batch_idx, dataloader_idx)
+</code></pre>
+<p>Examples::</p>
+<pre><code># CASE 1: A single validation dataset
+def validation_step(self, batch, batch_idx):
+    x, y = batch
+
+    # implement your own
+    out = self(x)
+    loss = self.loss(out, y)
+
+    # log 6 example images
+    # or generated text... or whatever
+    sample_imgs = x[:6]
+    grid = torchvision.utils.make_grid(sample_imgs)
+    self.logger.experiment.add_image('example_images', grid, 0)
+
+    # calculate acc
+    labels_hat = torch.argmax(out, dim=1)
+    val_acc = torch.sum(y == labels_hat).item() / (len(y) * 1.0)
+
+    # log the outputs!
+    self.log_dict({'val_loss': loss, 'val_acc': val_acc})
+</code></pre>
+<p>If you pass in multiple val dataloaders, :meth:<code>validation_step</code> will have an additional argument.</p>
+<p>.. code-block:: python</p>
+<pre><code># CASE 2: multiple validation dataloaders
+def validation_step(self, batch, batch_idx, dataloader_idx):
+    # dataloader_idx tells you which dataset this is.
+</code></pre>
+<h2 id="note">Note</h2>
+<p>If you don't need to validate you don't need to implement this method.</p>
+<h2 id="note_1">Note</h2>
+<p>When the :meth:<code>validation_step</code> is called, the model has been put in eval mode
+and PyTorch gradients have been disabled. At the end of validation,
+the model goes back to training mode and gradients are enabled.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def validation_step(self, batch: Any, batch_idx: int) -&gt; dict:
+    step_out = self.step(batch, batch_idx)
+    val_f1 = self.valid_f1(step_out[&#34;probs&#34;], batch[&#34;labels&#34;])
+
+    self.log(&#34;val_loss&#34;, step_out[&#34;loss&#34;])
+    self.log(&#34;val_f1&#34;, val_f1)
+    return {&#34;val_loss&#34;: step_out[&#34;loss&#34;], &#34;val_accuracy&#34;: val_f1}</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="src.pl_modules" href="index.html">src.pl_modules</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="src.pl_modules.rbert_model.main" href="#src.pl_modules.rbert_model.main">main</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="src.pl_modules.rbert_model.FCLayer" href="#src.pl_modules.rbert_model.FCLayer">FCLayer</a></code></h4>
+<ul class="">
+<li><code><a title="src.pl_modules.rbert_model.FCLayer.dump_patches" href="#src.pl_modules.rbert_model.FCLayer.dump_patches">dump_patches</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.FCLayer.forward" href="#src.pl_modules.rbert_model.FCLayer.forward">forward</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.FCLayer.training" href="#src.pl_modules.rbert_model.FCLayer.training">training</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="src.pl_modules.rbert_model.RBERT" href="#src.pl_modules.rbert_model.RBERT">RBERT</a></code></h4>
+<ul class="">
+<li><code><a title="src.pl_modules.rbert_model.RBERT.configure_optimizers" href="#src.pl_modules.rbert_model.RBERT.configure_optimizers">configure_optimizers</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.RBERT.dump_patches" href="#src.pl_modules.rbert_model.RBERT.dump_patches">dump_patches</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.RBERT.entity_average" href="#src.pl_modules.rbert_model.RBERT.entity_average">entity_average</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.RBERT.forward" href="#src.pl_modules.rbert_model.RBERT.forward">forward</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.RBERT.step" href="#src.pl_modules.rbert_model.RBERT.step">step</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.RBERT.training" href="#src.pl_modules.rbert_model.RBERT.training">training</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.RBERT.training_step" href="#src.pl_modules.rbert_model.RBERT.training_step">training_step</a></code></li>
+<li><code><a title="src.pl_modules.rbert_model.RBERT.validation_step" href="#src.pl_modules.rbert_model.RBERT.validation_step">validation_step</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>

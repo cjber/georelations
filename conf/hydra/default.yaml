@@ -1,5 +1,3 @@
-# @package _group_
-
 run:
   dir: ./experiments/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
@@ -10,3 +8,4 @@ sweep:
 job:
   env_set:
     WANDB_START_METHOD: thread
+    WANDB_DIR: ${oc.env:PROJECT_ROOT}

@@ -1,6 +1,3 @@
-# @package _group_
-
-
 datamodule:
   _target_: src.pl_data.datamodule.DataModule
 
@@ -8,12 +5,12 @@ datamodule:
     train:
       _target_: src.pl_data.dataset.CSVDataset
       name: TrainRELData
-      path: ${env:TRAIN_REL_DATASET}
+      path: ${oc.env:TRAIN_REL_DATASET}
 
     val:
       - _target_: src.pl_data.dataset.CSVDataset
         name: ValRELData
-        path: ${env:VAL_REL_DATASET}
+        path: ${oc.env:VAL_REL_DATASET}
 
   num_workers:
     train: 8
@@ -24,4 +21,3 @@ datamodule:
     train: 2
     val: 2
     test: 2
-

@@ -1,39 +1,29 @@
-# Geographic Relation Classification
+# NN Template
 
 <p align="center">
-
-<a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-orange?style=for-the-badge"></a>
-<a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/-Lightning-blueviolet?style=for-the-badge"></a>
-<a href="https://hydra.cc/"><img alt="Conf: hydra" src="https://img.shields.io/badge/conf-hydra-blue?style=for-the-badge"></a>
-<a href="https://wandb.ai/site"><img alt="Logging: wandb" src="https://img.shields.io/badge/logging-wandb-yellow?style=for-the-badge"></a>
-<a href="https://dvc.org/"><img alt="Conf: hydra" src="https://img.shields.io/badge/data-dvc-9cf?style=for-the-badge"></a>
-<a href="https://black.readthedocs.io/en/stable/"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge"></a>
-<a href="https://github.com/lucmos/nn-template?style=for-the-badge"> <img alt="Template: nn-template" src="https://shields.io/badge/-nn--template-emerald?style=for-the-badge&logo=github&labelColor=gray"></a>
-
+    <a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/-PyTorch-red?logo=pytorch&labelColor=gray"></a>
+    <a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/code-Lightning-blueviolet"></a>
+    <a href="https://hydra.cc/"><img alt="Conf: hydra" src="https://img.shields.io/badge/conf-hydra-blue"></a>
+    <a href="https://wandb.ai/site"><img alt="Logging: wandb" src="https://img.shields.io/badge/logging-wandb-yellow"></a>
+    <a href="https://dvc.org/"><img alt="Conf: hydra" src="https://img.shields.io/badge/data-dvc-9cf"></a>
+    <a href="https://streamlit.io/"><img alt="UI: streamlit" src="https://img.shields.io/badge/ui-streamlit-orange"></a>
+    <a href="https://black.readthedocs.io/en/stable/"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
 
-## Training
 
-* Train Geographic Entity Recognition Model
-    > `python -m src.train --config_name=ger`
+Generic template to bootstrap your [PyTorch](https://pytorch.org/get-started/locally/) project. Click on [![](https://img.shields.io/badge/-Use_this_template-success?style=flat)](https://github.com/lucmos/nn-template/generate) and avoid writing boilerplate code for:
 
-* Train Relation Classification Model
-    > `python -m src.train --config_name=rel`
-
-The GER model is a simple token classification model while the relation classification model is based on ![R-BERT](https://github.com/monologg/R-BERT), with alterations for compatibility with Pytorch Lightning.
-
----
-
-Generic template to bootstrap your [PyTorch](https://pytorch.org/get-started/locally/) project. Click on [<kbd>Use this Template</kbd>](https://github.com/lucmos/nn-template/generate) and avoid writing boilerplate code for:
-
-* [PyTorch Lightning](https://github.com/PyTorchLightning/pytorch-lightning), lightweight PyTorch wrapper for high-performance AI research.
-* [Hydra](https://github.com/facebookresearch/hydra), a framework for elegantly configuring complex applications.
-* [DVC](https://dvc.org/doc/start/data-versioning), track large files, directories, or ML models. Think "Git for data".
-* [Weights and Biases](https://wandb.ai/home), organize and analyze machine learning experiments. *(educational account available)*
+- [PyTorch Lightning](https://github.com/PyTorchLightning/pytorch-lightning), lightweight PyTorch wrapper for high-performance AI research.
+- [Hydra](https://github.com/facebookresearch/hydra), a framework for elegantly configuring complex applications.
+- [DVC](https://dvc.org/doc/start/data-versioning), track large files, directories, or ML models. Think "Git for data".
+- [Weights and Biases](https://wandb.ai/home), organize and analyze machine learning experiments. *(educational account available)*
+- [Streamlit](https://streamlit.io/), turns data scripts into shareable web apps in minutes.
 
 *`nn-template`* is opinionated so you don't have to be.
 If you use this template, please add
+[![](https://shields.io/badge/-nn--template-emerald?style=flat&logo=github&labelColor=gray)](https://github.com/lucmos/nn-template)
 to your `README`.
+
 
 ### Usage Examples
 
@@ -43,24 +33,45 @@ Checkout the [`mwe` branch](https://github.com/lucmos/nn-template/tree/mwe) to v
 
 ```bash
 .
-├── conf                # Hydra compositional config
-│   ├── default.yaml    # current experiment configuration
+├── .cache              
+├── conf                # hydra compositional config 
 │   ├── data
+│   ├── default.yaml    # current experiment configuration        
 │   ├── hydra
 │   ├── logging
 │   ├── model
 │   ├── optim
 │   └── train
 ├── data                # datasets
-├── experiments         # local logs
-├── README.md
+├── .env                # system-specific env variables, e.g. PROJECT_ROOT
 ├── requirements.txt    # basic requirements
-└── src
-    ├── common          # common Python modules
-    ├── pl_data         # PyTorch Lightning datamodules and datasets
-    ├── pl_modules      # PyTorch Lightning modules
-    └── run.py          # entry point to run current conf
+├── src
+│   ├── common          # common modules and utilities
+│   ├── pl_data         # PyTorch Lightning datamodules and datasets
+│   ├── pl_modules      # PyTorch Lightning modules
+│   ├── run.py          # entry point to run current conf
+│   └── ui              # interactive streamlit apps
+└── wandb               # local experiments (auto-generated)
 ```
+
+# Streamlit
+[Streamlit](https://docs.streamlit.io/) is an open-source Python library that makes
+it easy to create and share beautiful, custom web apps for machine learning and data science.
+
+In just a few minutes, you can build and deploy powerful data apps to:
+
+- **Explore** your data
+- **Interact** with your model
+- **Analyze** your model behavior and input sensitivity
+- **Showcase** your prototype with [awesome web apps](https://streamlit.io/gallery)
+
+Moreover, Streamlit enables interactive development with automatic rerun on files changes.
+
+Launch a minimal app with `PYTHONPATH=. streamlit run src/ui/run.py`. There is a built-in function to restore a model checkpoint stored on W&B, with automatic download if the checkpoint is not present in the local machine:
+
+![](https://i.imgur.com/3lTnOA1.png)
+
+
 
 # Data Version Control
 
@@ -69,13 +80,13 @@ DVC runs alongside `git` and uses the current commit hash to version control the
 Initialize the `dvc` repository:
 
 ```bash
-dvc init
+$ dvc init
 ```
 
 To start tracking a file or directory, use `dvc add`:
 
 ```bash
-dvc add data/ImageNet
+$ dvc add data/ImageNet
 ```
 
 DVC stores information about the added file (or a directory) in a special `.dvc` file named `data/ImageNet.dvc`, a small text file with a human-readable format.
@@ -91,7 +102,7 @@ git commit -m "Add raw data"
 When you make a change to a file or directory, run `dvc add` again to track the latest version:
 
 ```bash
-dvc add data/ImageNet
+$ dvc add data/ImageNet
 ```
 
 ## Switching between versions
@@ -99,13 +110,14 @@ dvc add data/ImageNet
 The regular workflow is to use `git checkout` first to switch a branch, checkout a commit, or a revision of a `.dvc` file, and then run `dvc checkout` to sync data:
 
 ```bash
-git checkout <...>
-dvc checkout
+$ git checkout <...>
+$ dvc checkout
 ```
 
 ---
 
 Read more in the [docs](https://dvc.org/doc/start/data-versioning)!
+
 
 # Weights and Biases
 
@@ -118,7 +130,9 @@ Weights & Biases helps you keep track of your machine learning projects. Use too
 Login to your `wandb` account, running once `wandb login`.
 Configure the logging in `conf/logging/*`.
 
+
 ---
+
 
 Read more in the [docs](https://docs.wandb.ai/). Particularly useful the [`log` method](https://docs.wandb.ai/library/log), accessible from inside a PyTorch Lightning module with `self.logger.experiment.log`.
 
@@ -133,6 +147,7 @@ Hydra is an open-source Python framework that simplifies the development of rese
 The basic functionalities are intuitive: it is enough to change the configuration files in `conf/*` accordingly to your preferences. Everything will be logged in `wandb` automatically.
 
 Consider creating new root configurations `conf/myawesomeexp.yaml` instead of always using the default `conf/default.yaml`.
+
 
 ## Sweeps
 
@@ -149,6 +164,7 @@ You can explore aggregate statistics or compare and analyze each run in the W&B 
 ---
 
 We recommend to go through at least the [Basic Tutorial](https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli), and the docs about [Instantiating objects with Hydra](https://hydra.cc/docs/patterns/instantiate_objects/overview).
+
 
 # PyTorch Lightning
 
@@ -180,6 +196,5 @@ get_env('MY_VAR')
 and in the Hydra `.yaml` configuration files with:
 
 ```yaml
-${env:MY_VAR}
+${oc.env:MY_VAR}
 ```
-

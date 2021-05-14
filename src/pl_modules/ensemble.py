@@ -4,14 +4,11 @@ import pytorch_lightning as pl
 import torch
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from src.common.utils import (
+from src.common.model_utils import (
     Config,
     convert_examples_to_features,
     ents_to_relations,
-    load_envs,
 )
-
-load_envs()
 
 
 class RelationEnsemble(pl.LightningModule):
@@ -19,8 +16,6 @@ class RelationEnsemble(pl.LightningModule):
         self, ger_model, rel_model, tokenizer=AutoTokenizer, *args, **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        # self.cfg = cfg
-        # self.save_hyperparameters(cfg)
 
         self.ger_model = ger_model
         self.rel_model = rel_model

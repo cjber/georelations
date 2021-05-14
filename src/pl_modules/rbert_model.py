@@ -1,14 +1,15 @@
 from typing import Any, Union
 
 import hydra
-from omegaconf.dictconfig import DictConfig
+import omegaconf
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
 from transformers import AutoModel
 
-from src.common.utils import Config
+from src.common.model_utils import Config, Label
+from src.common.utils import PROJECT_ROOT
 
 
 class FCLayer(nn.Module):
@@ -27,14 +28,13 @@ class FCLayer(nn.Module):
 
 
 class RBERT(pl.LightningModule):
-    def __init__(self, cfg: DictConfig, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__()
-        self.cfg = cfg
-        self.save_hyperparameters(cfg)
+        self.save_hyperparameters()
 
         self.model = AutoModel.from_pretrained(
             Config.MODEL_NAME,
-            num_labels=Config.REL_NUM,
+            num_labels=Label("REL").count,
             return_dict=True,
             output_attentions=False,
         )
@@ -45,13 +45,13 @@ class RBERT(pl.LightningModule):
         self.entity_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
         self.label_classifier = FCLayer(
             hidden_size * 3,
-            Config.REL_NUM,
+            Label("REL").count,
             dropout,
             use_activation=False,
         )
 
-        self.train_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
-        self.valid_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
+        self.train_f1 = pl.metrics.F1(num_classes=Label("REL").count)
+        self.valid_f1 = pl.metrics.F1(num_classes=Label("REL").count)
 
     @staticmethod
     def entity_average(hidden_output, e_mask):
@@ -97,12 +97,12 @@ class RBERT(pl.LightningModule):
 
         # Softmax
         if labels is not None:
-            if Config.REL_NUM == 1:
+            if Label("REL").count == 1:
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, Config.REL_NUM), labels.view(-1))
+                loss = loss_fct(logits.view(-1, Label("REL").count), labels.view(-1))
 
             outputs = (loss,) + outputs
         return outputs  # (loss), logits, (hidden_states), (attentions)
@@ -167,3 +167,18 @@ class RBERT(pl.LightningModule):
             }
 
         return opt
+
+
+@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="rel")
+def main(cfg: omegaconf.DictConfig):
+    model: pl.LightningModule = hydra.utils.instantiate(
+        cfg.model,
+        optim=cfg.optim,
+        data=cfg.data,
+        logging=cfg.logging,
+        _recursive_=False,
+    )
+
+
+if __name__ == "__main__":
+    main()

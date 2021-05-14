@@ -1,16 +1,11 @@
-# @package _group_
-
-# log frequency
 val_check_interval: 1.0
 progress_bar_refresh_rate: 20
 
 wandb:
-  project: wiki_relations
+  project: georelations
   entity: null
-
-  watch:
-    log: 'all'
-    log_freq: 100
+  log_model: False
+  mode: 'online'
 
 lr_monitor:
   logging_interval: "step"

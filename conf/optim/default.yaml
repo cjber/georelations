@@ -1,9 +1,7 @@
-# @package _group_
-
 optimizer:
   _target_: torch.optim.AdamW
   lr: 2e-5
-  betas: [ 0.9, 0.999 ]
+  betas: [0.9, 0.999]
   eps: 1e-08
   weight_decay: 0.01
 
@@ -13,3 +11,5 @@ lr_scheduler:
   mode: "max"
   verbose: True
   patience: 4
+
+monitor_metric: "val_f1"
