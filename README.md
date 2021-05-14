@@ -12,14 +12,14 @@
 
 ## Training
 
-- Train Geographic Entity Recognition Model &gt;
-  `python -m src.train --config_name=ger`
+- Build environment (inside venv) &gt; `make env`
 
-- Train Relation Classification Model &gt;
-  `python -m src.train --config_name=rel`
+- Train Model `{ger, rel}`: &gt; `make train-{model}`
 
-The GER model is a simple token classification model while the relation
-classification model is based on
+- Dev run `{ger, rel}`: `make dev-{model}`
+
+The GER model is a BERT-based token classification model while the
+relation classification model is based on
 ![R-BERT](https://github.com/monologg/R-BERT), with alterations for
 compatibility with Pytorch Lightning.
 
