@@ -1,19 +1,24 @@
-name: run-makes
-on: [push]
+name: make-doctest
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
 jobs:
-  run:
-    runs-on: [ubuntu-latest]
-    container: docker://dvcorg/cml:0-dvc2-base1
+  build:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: Install Python 3.9
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.9.5'
-      - name: cml_run
-        env:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          python-version: 3.9
+      - name: Install dependencies
         run: |
-          make env
-          make doctest
-          make clean
-          make docs
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run doctest
+        run: make doctest
