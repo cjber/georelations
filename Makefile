@@ -31,7 +31,7 @@ docs:
 	pdoc --html --force --output-dir docs src
 
 black:
-	black src
+	black src --check
 ## black: autolint all source files using black
 
 help:
