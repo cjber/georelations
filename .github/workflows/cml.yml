@@ -6,6 +6,9 @@ jobs:
     container: docker://dvcorg/cml:0-dvc2-base1
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.9.5'
       - name: cml_run
         env:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
