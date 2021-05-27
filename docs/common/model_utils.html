@@ -76,7 +76,7 @@ class Label:
 
 
 def encode_labels(
-    tokens: list[str], labels: list[int], tokenizer, max_token_len
+    tokens: list[str], labels: list[int], tokenizer, max_token_len=128
 ) -&gt; tuple[dict, np.ndarray]:
     &#34;&#34;&#34;
     Encode list of tokens and labels into subwords.
@@ -602,7 +602,7 @@ True
 </details>
 </dd>
 <dt id="src.common.model_utils.encode_labels"><code class="name flex">
-<span>def <span class="ident">encode_labels</span></span>(<span>tokens: list, labels: list, tokenizer, max_token_len) ‑> tuple</span>
+<span>def <span class="ident">encode_labels</span></span>(<span>tokens: list, labels: list, tokenizer, max_token_len=128) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Encode list of tokens and labels into subwords.</p>
@@ -644,7 +644,7 @@ True
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def encode_labels(
-    tokens: list[str], labels: list[int], tokenizer, max_token_len
+    tokens: list[str], labels: list[int], tokenizer, max_token_len=128
 ) -&gt; tuple[dict, np.ndarray]:
     &#34;&#34;&#34;
     Encode list of tokens and labels into subwords.

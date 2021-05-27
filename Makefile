@@ -28,7 +28,10 @@ clean:
 
 docs:
 ## docs: build documentation automatically
-	pdoc --html --force --output-dir docs src
+	rm -r docs \
+		&& pdoc --html --force --output-dir docs src \
+		&& mv docs/src/* docs/ \
+		&& rm -r docs/src
 
 black:
 	black src --check
