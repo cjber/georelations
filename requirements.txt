@@ -20,3 +20,4 @@ sparqlwrapper
 # dev
 flake8
 black
+wheel

@@ -30,6 +30,10 @@ docs:
 ## docs: build documentation automatically
 	pdoc --html --force --output-dir docs src
 
+black:
+	black src
+## black: autolint all source files using black
+
 help:
 ## help: This helpful list of commands
 	@echo "Usage: \n"
