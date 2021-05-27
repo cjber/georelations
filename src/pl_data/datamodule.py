@@ -66,6 +66,7 @@ class DataModule(pl.LightningDataModule):
             shuffle=True,
             batch_size=self.batch_size.train,
             num_workers=self.num_workers.train,
+            worker_init_fn=worker_init_fn,
         )
 
     def val_dataloader(self) -> Sequence[DataLoader]:
@@ -75,6 +76,7 @@ class DataModule(pl.LightningDataModule):
                 shuffle=False,
                 batch_size=self.batch_size.val,
                 num_workers=self.num_workers.val,
+                worker_init_fn=worker_init_fn,
             )
             for dataset in self.val_datasets
         ]

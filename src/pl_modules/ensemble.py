@@ -5,7 +5,7 @@ import torch
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from src.common.model_utils import (
-    Config,
+    Label,
     convert_examples_to_features,
     ents_to_relations,
 )
@@ -21,7 +21,7 @@ class RelationEnsemble(pl.LightningModule):
         self.rel_model = rel_model
 
         ADDITIONAL_SPECIAL_TOKENS = ["<e1>", "</e1>", "<e2>", "</e2>"]
-        self.tokenizer = tokenizer.from_pretrained(Config.MODEL_NAME)
+        self.tokenizer = tokenizer.from_pretrained(self.ger_model.model_name)
         self.tokenizer.add_special_tokens(
             {"additional_special_tokens": ADDITIONAL_SPECIAL_TOKENS}
         )
@@ -41,7 +41,7 @@ class RelationEnsemble(pl.LightningModule):
             features = [
                 convert_examples_to_features(
                     item,
-                    max_seq_len=Config.MAX_TOKEN_LEN,
+                    max_seq_len=self.ger_model.model_name,
                     tokenizer=self.tokenizer,
                     labels=False,
                 )
@@ -71,5 +71,5 @@ class RelationEnsemble(pl.LightningModule):
             rel_out = self.rel_model(**rel_in, labels=None)
             return (
                 sequence_list,
-                [Config.REL_IDX[rel] for rel in rel_out[0].argmax(dim=1).tolist()],
+                [Label("REL").labels[rel] for rel in rel_out[0].argmax(dim=1).tolist()],
             )

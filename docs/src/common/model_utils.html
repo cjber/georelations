@@ -27,6 +27,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">from collections import Counter
+import torch
 import copy
 import json
 import string
@@ -36,32 +37,34 @@ import numpy as np
 import pandas as pd
 
 
-class Config:
-    &#34;&#34;&#34;Label params&#34;&#34;&#34;
+class Label:
+    def __init__(self, name: str):
+        &#34;&#34;&#34;
+        Class used to create labels based on task.
 
-    GER_LABELS: dict[str, int] = {
-        &#34;B-PLACE&#34;: 0,
-        &#34;I-PLACE&#34;: 1,
-        &#34;L-PLACE&#34;: 2,
-        &#34;U-PLACE&#34;: 3,
-        &#34;O&#34;: 4,
-    }
-    GER_IDX: dict[int, str] = {v: k for k, v in GER_LABELS.items()}
-    GER_NUM: int = len(GER_LABELS)
+        Parameters
+        ----------
+        name : str
+            Name of task, either GER or REL.
+        &#34;&#34;&#34;
+        self.name = name
+        assert self.name in [&#34;GER&#34;, &#34;REL&#34;], &#34;Type must be either GER or REL&#34;
 
-    REL_LABELS: dict[str, int] = {&#34;NONE&#34;: 0, &#34;NTPP&#34;: 1, &#34;DC&#34;: 2}
-    REL_IDX: dict[int, str] = {v: k for k, v in REL_LABELS.items()}
-    REL_NUM: int = len(REL_LABELS)
+        if self.name == &#34;GER&#34;:
+            self.labels: dict[str, int] = {
+                &#34;B-PLACE&#34;: 0,
+                &#34;I-PLACE&#34;: 1,
+                &#34;L-PLACE&#34;: 2,
+                &#34;U-PLACE&#34;: 3,
+                &#34;O&#34;: 4,
+            }
+        elif self.name == &#34;REL&#34;:
+            self.labels: dict[str, int] = {&#34;NONE&#34;: 0, &#34;NTPP&#34;: 1, &#34;DC&#34;: 2}
 
-    &#34;&#34;&#34;Model params&#34;&#34;&#34;
+        self.idx: dict[int, str] = {v: k for k, v in self.labels.items()}
+        self.count: int = len(self.labels)
 
-    MAX_TOKEN_LEN: int = 128
-    MODEL_NAME: str = &#34;roberta-base&#34;
-
-
-class InputFeatures(object):
     &#34;&#34;&#34;
-    A single set of features of data.
 
     Args:
         input_ids: Indices of input sequence tokens in the vocabulary.
@@ -71,36 +74,9 @@ class InputFeatures(object):
         token_type_ids: Segment token indices to indicate first and second portions of the inputs.
     &#34;&#34;&#34;
 
-    def __init__(
-        self,
-        input_ids,
-        attention_mask,
-        token_type_ids,
-        e1_mask,
-        e2_mask,
-        label_id: Union[int, None],
-    ):
-        self.input_ids = input_ids
-        self.attention_mask = attention_mask
-        self.token_type_ids = token_type_ids
-        self.label_id = label_id
-        self.e1_mask = e1_mask
-        self.e2_mask = e2_mask
-
-    def __repr__(self):
-        return str(self.to_json_string())
-
-    def to_dict(self):
-        &#34;&#34;&#34;Serializes this instance to a Python dictionary.&#34;&#34;&#34;
-        return copy.deepcopy(self.__dict__)
-
-    def to_json_string(self):
-        &#34;&#34;&#34;Serializes this instance to a JSON string.&#34;&#34;&#34;
-        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + &#34;\n&#34;
-
 
 def encode_labels(
-    tokens: list[str], labels: list[int], tokenizer
+    tokens: list[str], labels: list[int], tokenizer, max_token_len
 ) -&gt; tuple[dict, np.ndarray]:
     &#34;&#34;&#34;
     Encode list of tokens and labels into subwords.
@@ -119,6 +95,8 @@ def encode_labels(
         Label IDs for each token in sequence
     tokenizer : transformers.PretrainedTokenizer
         HuggingFace tokenizer
+    max_token_len : int
+        Cutoff length for number of tokens
 
     Returns
     -------
@@ -132,7 +110,7 @@ def encode_labels(
     &gt;&gt;&gt; tokens = [&#39;Testing&#39;, &#39;this&#39;, &#39;for&#39;, &#39;doctest&#39;, &#39;.&#39;]
     &gt;&gt;&gt; labels = [1, 0, 0, 0, 0]
     &gt;&gt;&gt; tokenizer = AutoTokenizer.from_pretrained(
-    ...     Config.MODEL_NAME, add_prefix_space=True
+    ...     &#39;roberta-base&#39;, add_prefix_space=True
     ... )
     &gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
 
@@ -143,7 +121,7 @@ def encode_labels(
         tokens,
         is_split_into_words=True,
         return_attention_mask=True,
-        max_length=Config.MAX_TOKEN_LEN,
+        max_length=max_token_len,
         padding=&#34;max_length&#34;,
         truncation=True,
         return_tensors=&#34;pt&#34;,
@@ -153,7 +131,7 @@ def encode_labels(
             tokens,
             is_split_into_words=True,
             add_special_tokens=True,
-            max_length=Config.MAX_TOKEN_LEN,
+            max_length=max_token_len,
             padding=&#34;max_length&#34;,
             truncation=True,
         )
@@ -210,7 +188,7 @@ def combine_subwords(tokens: list[str], tags: list[int]) -&gt; tuple[list[str], 
     idx = [idx for idx, token in enumerate(tokens) if token[0] == &#34;\u0120&#34;]
 
     tokens = [tokens[i][1:] for i in idx]
-    tags_str: list[str] = [Config.GER_IDX[tags[i]] for i in idx]
+    tags_str: list[str] = [Label(&#34;GER&#34;).idx[tags[i]] for i in idx]
     return tokens, tags_str
 
 
@@ -372,14 +350,14 @@ def convert_examples_to_features(
         len(token_type_ids) == max_seq_len
     ), f&#34;Error with token type length {len(token_type_ids)} vs {max_seq_len}&#34;
 
-    return InputFeatures(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        token_type_ids=token_type_ids,
-        label_id=label_id,
-        e1_mask=e1_mask,
-        e2_mask=e2_mask,
-    )
+    return {
+        &#34;input_ids&#34;: torch.tensor(input_ids, dtype=torch.long),
+        &#34;attention_mask&#34;: torch.tensor(attention_mask, dtype=torch.long),
+        &#34;token_type_ids&#34;: torch.tensor(token_type_ids, dtype=torch.long),
+        &#34;labels&#34;: torch.tensor(label_id, dtype=torch.long),
+        &#34;e1_mask&#34;: torch.tensor(e1_mask, dtype=torch.long),
+        &#34;e2_mask&#34;: torch.tensor(e2_mask, dtype=torch.long),
+    }
 
 
 if __name__ == &#34;__main__&#34;:
@@ -518,7 +496,7 @@ True
     idx = [idx for idx, token in enumerate(tokens) if token[0] == &#34;\u0120&#34;]
 
     tokens = [tokens[i][1:] for i in idx]
-    tags_str: list[str] = [Config.GER_IDX[tags[i]] for i in idx]
+    tags_str: list[str] = [Label(&#34;GER&#34;).idx[tags[i]] for i in idx]
     return tokens, tags_str</code></pre>
 </details>
 </dd>
@@ -613,18 +591,18 @@ True
         len(token_type_ids) == max_seq_len
     ), f&#34;Error with token type length {len(token_type_ids)} vs {max_seq_len}&#34;
 
-    return InputFeatures(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        token_type_ids=token_type_ids,
-        label_id=label_id,
-        e1_mask=e1_mask,
-        e2_mask=e2_mask,
-    )</code></pre>
+    return {
+        &#34;input_ids&#34;: torch.tensor(input_ids, dtype=torch.long),
+        &#34;attention_mask&#34;: torch.tensor(attention_mask, dtype=torch.long),
+        &#34;token_type_ids&#34;: torch.tensor(token_type_ids, dtype=torch.long),
+        &#34;labels&#34;: torch.tensor(label_id, dtype=torch.long),
+        &#34;e1_mask&#34;: torch.tensor(e1_mask, dtype=torch.long),
+        &#34;e2_mask&#34;: torch.tensor(e2_mask, dtype=torch.long),
+    }</code></pre>
 </details>
 </dd>
 <dt id="src.common.model_utils.encode_labels"><code class="name flex">
-<span>def <span class="ident">encode_labels</span></span>(<span>tokens: list, labels: list, tokenizer) ‑> tuple</span>
+<span>def <span class="ident">encode_labels</span></span>(<span>tokens: list, labels: list, tokenizer, max_token_len) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Encode list of tokens and labels into subwords.</p>
@@ -641,6 +619,8 @@ words have been split into sub words, or there is padding.</p>
 <dd>Label IDs for each token in sequence</dd>
 <dt><strong><code>tokenizer</code></strong> :&ensp;<code>transformers.PretrainedTokenizer</code></dt>
 <dd>HuggingFace tokenizer</dd>
+<dt><strong><code>max_token_len</code></strong> :&ensp;<code>int</code></dt>
+<dd>Cutoff length for number of tokens</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -652,7 +632,7 @@ words have been split into sub words, or there is padding.</p>
 &gt;&gt;&gt; tokens = ['Testing', 'this', 'for', 'doctest', '.']
 &gt;&gt;&gt; labels = [1, 0, 0, 0, 0]
 &gt;&gt;&gt; tokenizer = AutoTokenizer.from_pretrained(
-...     Config.MODEL_NAME, add_prefix_space=True
+...     'roberta-base', add_prefix_space=True
 ... )
 &gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
 </code></pre>
@@ -664,7 +644,7 @@ True
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def encode_labels(
-    tokens: list[str], labels: list[int], tokenizer
+    tokens: list[str], labels: list[int], tokenizer, max_token_len
 ) -&gt; tuple[dict, np.ndarray]:
     &#34;&#34;&#34;
     Encode list of tokens and labels into subwords.
@@ -683,6 +663,8 @@ True
         Label IDs for each token in sequence
     tokenizer : transformers.PretrainedTokenizer
         HuggingFace tokenizer
+    max_token_len : int
+        Cutoff length for number of tokens
 
     Returns
     -------
@@ -696,7 +678,7 @@ True
     &gt;&gt;&gt; tokens = [&#39;Testing&#39;, &#39;this&#39;, &#39;for&#39;, &#39;doctest&#39;, &#39;.&#39;]
     &gt;&gt;&gt; labels = [1, 0, 0, 0, 0]
     &gt;&gt;&gt; tokenizer = AutoTokenizer.from_pretrained(
-    ...     Config.MODEL_NAME, add_prefix_space=True
+    ...     &#39;roberta-base&#39;, add_prefix_space=True
     ... )
     &gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
 
@@ -707,7 +689,7 @@ True
         tokens,
         is_split_into_words=True,
         return_attention_mask=True,
-        max_length=Config.MAX_TOKEN_LEN,
+        max_length=max_token_len,
         padding=&#34;max_length&#34;,
         truncation=True,
         return_tensors=&#34;pt&#34;,
@@ -717,7 +699,7 @@ True
             tokens,
             is_split_into_words=True,
             add_special_tokens=True,
-            max_length=Config.MAX_TOKEN_LEN,
+            max_length=max_token_len,
             padding=&#34;max_length&#34;,
             truncation=True,
         )
@@ -796,98 +778,49 @@ True
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="src.common.model_utils.Config"><code class="flex name class">
-<span>class <span class="ident">Config</span></span>
+<dt id="src.common.model_utils.Label"><code class="flex name class">
+<span>class <span class="ident">Label</span></span>
+<span>(</span><span>name: str)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Label params</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class Config:
-    &#34;&#34;&#34;Label params&#34;&#34;&#34;
-
-    GER_LABELS: dict[str, int] = {
-        &#34;B-PLACE&#34;: 0,
-        &#34;I-PLACE&#34;: 1,
-        &#34;L-PLACE&#34;: 2,
-        &#34;U-PLACE&#34;: 3,
-        &#34;O&#34;: 4,
-    }
-    GER_IDX: dict[int, str] = {v: k for k, v in GER_LABELS.items()}
-    GER_NUM: int = len(GER_LABELS)
-
-    REL_LABELS: dict[str, int] = {&#34;NONE&#34;: 0, &#34;NTPP&#34;: 1, &#34;DC&#34;: 2}
-    REL_IDX: dict[int, str] = {v: k for k, v in REL_LABELS.items()}
-    REL_NUM: int = len(REL_LABELS)
-
-    &#34;&#34;&#34;Model params&#34;&#34;&#34;
-
-    MAX_TOKEN_LEN: int = 128
-    MODEL_NAME: str = &#34;roberta-base&#34;</code></pre>
-</details>
-<h3>Class variables</h3>
+<div class="desc"><p>Class used to create labels based on task.</p>
+<h2 id="parameters">Parameters</h2>
 <dl>
-<dt id="src.common.model_utils.Config.GER_IDX"><code class="name">var <span class="ident">GER_IDX</span> : dict</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="src.common.model_utils.Config.GER_LABELS"><code class="name">var <span class="ident">GER_LABELS</span> : dict</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="src.common.model_utils.Config.GER_NUM"><code class="name">var <span class="ident">GER_NUM</span> : int</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="src.common.model_utils.Config.MAX_TOKEN_LEN"><code class="name">var <span class="ident">MAX_TOKEN_LEN</span> : int</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="src.common.model_utils.Config.MODEL_NAME"><code class="name">var <span class="ident">MODEL_NAME</span> : str</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="src.common.model_utils.Config.REL_IDX"><code class="name">var <span class="ident">REL_IDX</span> : dict</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="src.common.model_utils.Config.REL_LABELS"><code class="name">var <span class="ident">REL_LABELS</span> : dict</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="src.common.model_utils.Config.REL_NUM"><code class="name">var <span class="ident">REL_NUM</span> : int</code></dt>
-<dd>
-<div class="desc"><p>Model params</p></div>
-</dd>
-</dl>
-</dd>
-<dt id="src.common.model_utils.InputFeatures"><code class="flex name class">
-<span>class <span class="ident">InputFeatures</span></span>
-<span>(</span><span>input_ids, attention_mask, token_type_ids, e1_mask, e2_mask, label_id: Optional[int])</span>
-</code></dt>
-<dd>
-<div class="desc"><p>A single set of features of data.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>input_ids</code></strong></dt>
-<dd>Indices of input sequence tokens in the vocabulary.</dd>
-<dt><strong><code>attention_mask</code></strong></dt>
-<dd>Mask to avoid performing attention on padding token indices.
-Mask values selected in <code>[0, 1]</code>:
-Usually
-<code>1</code> for tokens that are NOT MASKED, <code>0</code> for MASKED (padded) tokens.</dd>
-<dt><strong><code>token_type_ids</code></strong></dt>
-<dd>Segment token indices to indicate first and second portions of the inputs.</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of task, either GER or REL.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class InputFeatures(object):
+<pre><code class="python">class Label:
+    def __init__(self, name: str):
+        &#34;&#34;&#34;
+        Class used to create labels based on task.
+
+        Parameters
+        ----------
+        name : str
+            Name of task, either GER or REL.
+        &#34;&#34;&#34;
+        self.name = name
+        assert self.name in [&#34;GER&#34;, &#34;REL&#34;], &#34;Type must be either GER or REL&#34;
+
+        if self.name == &#34;GER&#34;:
+            self.labels: dict[str, int] = {
+                &#34;B-PLACE&#34;: 0,
+                &#34;I-PLACE&#34;: 1,
+                &#34;L-PLACE&#34;: 2,
+                &#34;U-PLACE&#34;: 3,
+                &#34;O&#34;: 4,
+            }
+        elif self.name == &#34;REL&#34;:
+            self.labels: dict[str, int] = {&#34;NONE&#34;: 0, &#34;NTPP&#34;: 1, &#34;DC&#34;: 2}
+
+        self.idx: dict[int, str] = {v: k for k, v in self.labels.items()}
+        self.count: int = len(self.labels)
+
     &#34;&#34;&#34;
-    A single set of features of data.
 
     Args:
         input_ids: Indices of input sequence tokens in the vocabulary.
@@ -895,66 +828,8 @@ Usually
             Mask values selected in ``[0, 1]``:
             Usually  ``1`` for tokens that are NOT MASKED, ``0`` for MASKED (padded) tokens.
         token_type_ids: Segment token indices to indicate first and second portions of the inputs.
-    &#34;&#34;&#34;
-
-    def __init__(
-        self,
-        input_ids,
-        attention_mask,
-        token_type_ids,
-        e1_mask,
-        e2_mask,
-        label_id: Union[int, None],
-    ):
-        self.input_ids = input_ids
-        self.attention_mask = attention_mask
-        self.token_type_ids = token_type_ids
-        self.label_id = label_id
-        self.e1_mask = e1_mask
-        self.e2_mask = e2_mask
-
-    def __repr__(self):
-        return str(self.to_json_string())
-
-    def to_dict(self):
-        &#34;&#34;&#34;Serializes this instance to a Python dictionary.&#34;&#34;&#34;
-        return copy.deepcopy(self.__dict__)
-
-    def to_json_string(self):
-        &#34;&#34;&#34;Serializes this instance to a JSON string.&#34;&#34;&#34;
-        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + &#34;\n&#34;</code></pre>
+    &#34;&#34;&#34;</code></pre>
 </details>
-<h3>Methods</h3>
-<dl>
-<dt id="src.common.model_utils.InputFeatures.to_dict"><code class="name flex">
-<span>def <span class="ident">to_dict</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Serializes this instance to a Python dictionary.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def to_dict(self):
-    &#34;&#34;&#34;Serializes this instance to a Python dictionary.&#34;&#34;&#34;
-    return copy.deepcopy(self.__dict__)</code></pre>
-</details>
-</dd>
-<dt id="src.common.model_utils.InputFeatures.to_json_string"><code class="name flex">
-<span>def <span class="ident">to_json_string</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Serializes this instance to a JSON string.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def to_json_string(self):
-    &#34;&#34;&#34;Serializes this instance to a JSON string.&#34;&#34;&#34;
-    return json.dumps(self.to_dict(), indent=2, sort_keys=True) + &#34;\n&#34;</code></pre>
-</details>
-</dd>
-</dl>
 </dd>
 </dl>
 </section>
@@ -982,24 +857,7 @@ Usually
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="src.common.model_utils.Config" href="#src.common.model_utils.Config">Config</a></code></h4>
-<ul class="two-column">
-<li><code><a title="src.common.model_utils.Config.GER_IDX" href="#src.common.model_utils.Config.GER_IDX">GER_IDX</a></code></li>
-<li><code><a title="src.common.model_utils.Config.GER_LABELS" href="#src.common.model_utils.Config.GER_LABELS">GER_LABELS</a></code></li>
-<li><code><a title="src.common.model_utils.Config.GER_NUM" href="#src.common.model_utils.Config.GER_NUM">GER_NUM</a></code></li>
-<li><code><a title="src.common.model_utils.Config.MAX_TOKEN_LEN" href="#src.common.model_utils.Config.MAX_TOKEN_LEN">MAX_TOKEN_LEN</a></code></li>
-<li><code><a title="src.common.model_utils.Config.MODEL_NAME" href="#src.common.model_utils.Config.MODEL_NAME">MODEL_NAME</a></code></li>
-<li><code><a title="src.common.model_utils.Config.REL_IDX" href="#src.common.model_utils.Config.REL_IDX">REL_IDX</a></code></li>
-<li><code><a title="src.common.model_utils.Config.REL_LABELS" href="#src.common.model_utils.Config.REL_LABELS">REL_LABELS</a></code></li>
-<li><code><a title="src.common.model_utils.Config.REL_NUM" href="#src.common.model_utils.Config.REL_NUM">REL_NUM</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="src.common.model_utils.InputFeatures" href="#src.common.model_utils.InputFeatures">InputFeatures</a></code></h4>
-<ul class="">
-<li><code><a title="src.common.model_utils.InputFeatures.to_dict" href="#src.common.model_utils.InputFeatures.to_dict">to_dict</a></code></li>
-<li><code><a title="src.common.model_utils.InputFeatures.to_json_string" href="#src.common.model_utils.InputFeatures.to_json_string">to_json_string</a></code></li>
-</ul>
+<h4><code><a title="src.common.model_utils.Label" href="#src.common.model_utils.Label">Label</a></code></h4>
 </li>
 </ul>
 </li>

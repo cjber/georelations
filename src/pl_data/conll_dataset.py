@@ -25,7 +25,7 @@ class CoNLLDataset(Dataset):
         self.path = path
         self.name = name
         self.model_name = model_name
-        self.max_token_len = int(max_token_len)
+        self.max_token_len = int(max_token_len)  # type: ignore
 
         self.data: list[dict[str, tuple[str]]] = self.read_conll()
         self.tokenizer = tokenizer.from_pretrained(
@@ -78,7 +78,7 @@ class CoNLLDataset(Dataset):
 
 @hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="default")
 def main(cfg: omegaconf.DictConfig):
-    dataset: CoNLLDataset = hydra.utils.instantiate(
+    dataset: CoNLLDataset = hydra.utils.instantiate(  # type: ignore
         cfg.data.datamodule.datasets.train, _recursive_=False
     )
 

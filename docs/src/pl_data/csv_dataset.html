@@ -26,7 +26,9 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import hydra
+<pre><code class="python">from ast import literal_eval
+
+import hydra
 import omegaconf
 from omegaconf import ValueNode
 import pandas as pd
@@ -34,9 +36,8 @@ import torch
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from src.common.model_utils import Config, convert_examples_to_features
+from src.common.model_utils import Label, convert_examples_to_features
 from src.common.utils import PROJECT_ROOT
-
 
 
 class CSVDataset(Dataset):
@@ -44,6 +45,9 @@ class CSVDataset(Dataset):
         self,
         name: ValueNode,
         path: ValueNode,
+        model_name: ValueNode,
+        max_token_len: ValueNode,
+        special_tokens: ValueNode,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
@@ -51,11 +55,13 @@ class CSVDataset(Dataset):
         self.data: pd.DataFrame = pd.read_csv(
             path, header=None, names=[&#34;label&#34;, &#34;text_a&#34;]  # type: ignore
         )
+        self.model_name = model_name
+        self.max_token_len = int(max_token_len)
+        self.special_tokens: list[str] = literal_eval(special_tokens)
 
-        ADDITIONAL_SPECIAL_TOKENS = [&#34;&lt;e1&gt;&#34;, &#34;&lt;/e1&gt;&#34;, &#34;&lt;e2&gt;&#34;, &#34;&lt;/e2&gt;&#34;]
-        self.tokenizer = tokenizer.from_pretrained(Config.MODEL_NAME)
+        self.tokenizer = tokenizer.from_pretrained(self.model_name)
         self.tokenizer.add_special_tokens(
-            {&#34;additional_special_tokens&#34;: ADDITIONAL_SPECIAL_TOKENS}
+            {&#34;additional_special_tokens&#34;: self.special_tokens}
         )
 
     def __len__(self):
@@ -64,18 +70,10 @@ class CSVDataset(Dataset):
     def __getitem__(self, index: int):
         item = self.data.iloc[index]
 
-        item.label = Config.REL_LABELS[item.label]
-        features = convert_examples_to_features(
-            item, max_seq_len=Config.MAX_TOKEN_LEN, tokenizer=self.tokenizer
+        item.label = Label(&#34;REL&#34;).labels[item.label]
+        return convert_examples_to_features(
+            item, max_seq_len=self.max_token_len, tokenizer=self.tokenizer
         )
-        return {
-            &#34;input_ids&#34;: torch.tensor(features.input_ids, dtype=torch.long),
-            &#34;attention_mask&#34;: torch.tensor(features.attention_mask, dtype=torch.long),
-            &#34;token_type_ids&#34;: torch.tensor(features.token_type_ids, dtype=torch.long),
-            &#34;labels&#34;: torch.tensor(features.label_id, dtype=torch.long),
-            &#34;e1_mask&#34;: torch.tensor(features.e1_mask, dtype=torch.long),
-            &#34;e2_mask&#34;: torch.tensor(features.e2_mask, dtype=torch.long),
-        }
 
 
 @hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;default&#34;)
@@ -119,7 +117,7 @@ def main(cfg: omegaconf.DictConfig):
 <dl>
 <dt id="src.pl_data.csv_dataset.CSVDataset"><code class="flex name class">
 <span>class <span class="ident">CSVDataset</span></span>
-<span>(</span><span>name: omegaconf.nodes.ValueNode, path: omegaconf.nodes.ValueNode, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
+<span>(</span><span>name: omegaconf.nodes.ValueNode, path: omegaconf.nodes.ValueNode, model_name: omegaconf.nodes.ValueNode, max_token_len: omegaconf.nodes.ValueNode, special_tokens: omegaconf.nodes.ValueNode, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>An abstract class representing a :class:<code>Dataset</code>.</p>
@@ -145,6 +143,9 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
         self,
         name: ValueNode,
         path: ValueNode,
+        model_name: ValueNode,
+        max_token_len: ValueNode,
+        special_tokens: ValueNode,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
@@ -152,11 +153,13 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
         self.data: pd.DataFrame = pd.read_csv(
             path, header=None, names=[&#34;label&#34;, &#34;text_a&#34;]  # type: ignore
         )
+        self.model_name = model_name
+        self.max_token_len = int(max_token_len)
+        self.special_tokens: list[str] = literal_eval(special_tokens)
 
-        ADDITIONAL_SPECIAL_TOKENS = [&#34;&lt;e1&gt;&#34;, &#34;&lt;/e1&gt;&#34;, &#34;&lt;e2&gt;&#34;, &#34;&lt;/e2&gt;&#34;]
-        self.tokenizer = tokenizer.from_pretrained(Config.MODEL_NAME)
+        self.tokenizer = tokenizer.from_pretrained(self.model_name)
         self.tokenizer.add_special_tokens(
-            {&#34;additional_special_tokens&#34;: ADDITIONAL_SPECIAL_TOKENS}
+            {&#34;additional_special_tokens&#34;: self.special_tokens}
         )
 
     def __len__(self):
@@ -165,18 +168,10 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
     def __getitem__(self, index: int):
         item = self.data.iloc[index]
 
-        item.label = Config.REL_LABELS[item.label]
-        features = convert_examples_to_features(
-            item, max_seq_len=Config.MAX_TOKEN_LEN, tokenizer=self.tokenizer
-        )
-        return {
-            &#34;input_ids&#34;: torch.tensor(features.input_ids, dtype=torch.long),
-            &#34;attention_mask&#34;: torch.tensor(features.attention_mask, dtype=torch.long),
-            &#34;token_type_ids&#34;: torch.tensor(features.token_type_ids, dtype=torch.long),
-            &#34;labels&#34;: torch.tensor(features.label_id, dtype=torch.long),
-            &#34;e1_mask&#34;: torch.tensor(features.e1_mask, dtype=torch.long),
-            &#34;e2_mask&#34;: torch.tensor(features.e2_mask, dtype=torch.long),
-        }</code></pre>
+        item.label = Label(&#34;REL&#34;).labels[item.label]
+        return convert_examples_to_features(
+            item, max_seq_len=self.max_token_len, tokenizer=self.tokenizer
+        )</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">

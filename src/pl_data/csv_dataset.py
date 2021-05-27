@@ -1,3 +1,5 @@
+from ast import literal_eval
+
 import hydra
 import omegaconf
 from omegaconf import ValueNode
@@ -6,9 +8,8 @@ import torch
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from src.common.model_utils import Config, convert_examples_to_features
+from src.common.model_utils import Label, convert_examples_to_features
 from src.common.utils import PROJECT_ROOT
-
 
 
 class CSVDataset(Dataset):
@@ -16,6 +17,9 @@ class CSVDataset(Dataset):
         self,
         name: ValueNode,
         path: ValueNode,
+        model_name: ValueNode,
+        max_token_len: ValueNode,
+        special_tokens: ValueNode,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
@@ -23,11 +27,13 @@ class CSVDataset(Dataset):
         self.data: pd.DataFrame = pd.read_csv(
             path, header=None, names=["label", "text_a"]  # type: ignore
         )
+        self.model_name = model_name
+        self.max_token_len = int(max_token_len)
+        self.special_tokens: list[str] = literal_eval(special_tokens)
 
-        ADDITIONAL_SPECIAL_TOKENS = ["<e1>", "</e1>", "<e2>", "</e2>"]
-        self.tokenizer = tokenizer.from_pretrained(Config.MODEL_NAME)
+        self.tokenizer = tokenizer.from_pretrained(self.model_name)
         self.tokenizer.add_special_tokens(
-            {"additional_special_tokens": ADDITIONAL_SPECIAL_TOKENS}
+            {"additional_special_tokens": self.special_tokens}
         )
 
     def __len__(self):
@@ -36,18 +42,10 @@ class CSVDataset(Dataset):
     def __getitem__(self, index: int):
         item = self.data.iloc[index]
 
-        item.label = Config.REL_LABELS[item.label]
-        features = convert_examples_to_features(
-            item, max_seq_len=Config.MAX_TOKEN_LEN, tokenizer=self.tokenizer
+        item.label = Label("REL").labels[item.label]
+        return convert_examples_to_features(
+            item, max_seq_len=self.max_token_len, tokenizer=self.tokenizer
         )
-        return {
-            "input_ids": torch.tensor(features.input_ids, dtype=torch.long),
-            "attention_mask": torch.tensor(features.attention_mask, dtype=torch.long),
-            "token_type_ids": torch.tensor(features.token_type_ids, dtype=torch.long),
-            "labels": torch.tensor(features.label_id, dtype=torch.long),
-            "e1_mask": torch.tensor(features.e1_mask, dtype=torch.long),
-            "e2_mask": torch.tensor(features.e2_mask, dtype=torch.long),
-        }
 
 
 @hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="default")

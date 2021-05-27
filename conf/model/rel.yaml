@@ -1,1 +1,3 @@
 _target_: src.pl_modules.rbert_model.RBERT
+
+model_name: ${oc.env:MODEL_NAME}

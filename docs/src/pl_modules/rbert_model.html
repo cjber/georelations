@@ -36,7 +36,7 @@ import torch.nn as nn
 from torch.optim import Optimizer
 from transformers import AutoModel
 
-from src.common.model_utils import Config
+from src.common.model_utils import Label
 from src.common.utils import PROJECT_ROOT
 
 
@@ -56,13 +56,14 @@ class FCLayer(nn.Module):
 
 
 class RBERT(pl.LightningModule):
-    def __init__(self, *args, **kwargs) -&gt; None:
+    def __init__(self, model_name, *args, **kwargs) -&gt; None:
         super().__init__()
         self.save_hyperparameters()
+        self.model_name = model_name
 
         self.model = AutoModel.from_pretrained(
-            Config.MODEL_NAME,
-            num_labels=Config.REL_NUM,
+            self.model_name,
+            num_labels=Label(&#34;REL&#34;).count,
             return_dict=True,
             output_attentions=False,
         )
@@ -73,13 +74,13 @@ class RBERT(pl.LightningModule):
         self.entity_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
         self.label_classifier = FCLayer(
             hidden_size * 3,
-            Config.REL_NUM,
+            Label(&#34;REL&#34;).count,
             dropout,
             use_activation=False,
         )
 
-        self.train_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
-        self.valid_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
+        self.train_f1 = pl.metrics.F1(num_classes=Label(&#34;REL&#34;).count)
+        self.valid_f1 = pl.metrics.F1(num_classes=Label(&#34;REL&#34;).count)
 
     @staticmethod
     def entity_average(hidden_output, e_mask):
@@ -125,12 +126,12 @@ class RBERT(pl.LightningModule):
 
         # Softmax
         if labels is not None:
-            if Config.REL_NUM == 1:
+            if Label(&#34;REL&#34;).count == 1:
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, Config.REL_NUM), labels.view(-1))
+                loss = loss_fct(logits.view(-1, Label(&#34;REL&#34;).count), labels.view(-1))
 
             outputs = (loss,) + outputs
         return outputs  # (loss), logits, (hidden_states), (attentions)
@@ -335,7 +336,7 @@ registered hooks while the latter silently ignores them.</p>
 </dd>
 <dt id="src.pl_modules.rbert_model.RBERT"><code class="flex name class">
 <span>class <span class="ident">RBERT</span></span>
-<span>(</span><span>*args, **kwargs)</span>
+<span>(</span><span>model_name, *args, **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Helper class that provides a standard way to create an ABC using
@@ -345,13 +346,14 @@ inheritance.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class RBERT(pl.LightningModule):
-    def __init__(self, *args, **kwargs) -&gt; None:
+    def __init__(self, model_name, *args, **kwargs) -&gt; None:
         super().__init__()
         self.save_hyperparameters()
+        self.model_name = model_name
 
         self.model = AutoModel.from_pretrained(
-            Config.MODEL_NAME,
-            num_labels=Config.REL_NUM,
+            self.model_name,
+            num_labels=Label(&#34;REL&#34;).count,
             return_dict=True,
             output_attentions=False,
         )
@@ -362,13 +364,13 @@ inheritance.</p></div>
         self.entity_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
         self.label_classifier = FCLayer(
             hidden_size * 3,
-            Config.REL_NUM,
+            Label(&#34;REL&#34;).count,
             dropout,
             use_activation=False,
         )
 
-        self.train_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
-        self.valid_f1 = pl.metrics.F1(num_classes=Config.REL_NUM)
+        self.train_f1 = pl.metrics.F1(num_classes=Label(&#34;REL&#34;).count)
+        self.valid_f1 = pl.metrics.F1(num_classes=Label(&#34;REL&#34;).count)
 
     @staticmethod
     def entity_average(hidden_output, e_mask):
@@ -414,12 +416,12 @@ inheritance.</p></div>
 
         # Softmax
         if labels is not None:
-            if Config.REL_NUM == 1:
+            if Label(&#34;REL&#34;).count == 1:
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, Config.REL_NUM), labels.view(-1))
+                loss = loss_fct(logits.view(-1, Label(&#34;REL&#34;).count), labels.view(-1))
 
             outputs = (loss,) + outputs
         return outputs  # (loss), logits, (hidden_states), (attentions)
@@ -780,12 +782,12 @@ def forward(self, batch):
 
     # Softmax
     if labels is not None:
-        if Config.REL_NUM == 1:
+        if Label(&#34;REL&#34;).count == 1:
             loss_fct = nn.MSELoss()
             loss = loss_fct(logits.view(-1), labels.view(-1))
         else:
             loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, Config.REL_NUM), labels.view(-1))
+            loss = loss_fct(logits.view(-1, Label(&#34;REL&#34;).count), labels.view(-1))
 
         outputs = (loss,) + outputs
     return outputs  # (loss), logits, (hidden_states), (attentions)</code></pre>

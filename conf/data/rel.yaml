@@ -5,12 +5,18 @@ datamodule:
     train:
       _target_: src.pl_data.dataset.CSVDataset
       name: TrainRELData
+      model_name: ${oc.env:MODEL_NAME}
+      max_token_len: ${oc.env:MAX_TOKEN_LEN}
       path: ${oc.env:TRAIN_REL_DATASET}
+      special_tokens: ${oc.env:SPECIAL_TOKENS}
 
     val:
       - _target_: src.pl_data.dataset.CSVDataset
         name: ValRELData
+        model_name: ${oc.env:MODEL_NAME}
+        max_token_len: ${oc.env:MAX_TOKEN_LEN}
         path: ${oc.env:VAL_REL_DATASET}
+        special_tokens: ${oc.env:SPECIAL_TOKENS}
 
   num_workers:
     train: 8

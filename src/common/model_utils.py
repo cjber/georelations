@@ -1,4 +1,5 @@
 from collections import Counter
+import torch
 import copy
 import json
 import string
@@ -10,6 +11,14 @@ import pandas as pd
 
 class Label:
     def __init__(self, name: str):
+        """
+        Class used to create labels based on task.
+
+        Parameters
+        ----------
+        name : str
+            Name of task, either GER or REL.
+        """
         self.name = name
         assert self.name in ["GER", "REL"], "Type must be either GER or REL"
 
@@ -27,18 +36,7 @@ class Label:
         self.idx: dict[int, str] = {v: k for k, v in self.labels.items()}
         self.count: int = len(self.labels)
 
-
-class Config:
-
-    """Model params"""
-
-    MAX_TOKEN_LEN: int = 128
-    MODEL_NAME: str = "roberta-base"
-
-
-class InputFeatures(object):
     """
-    A single set of features of data.
 
     Args:
         input_ids: Indices of input sequence tokens in the vocabulary.
@@ -48,36 +46,9 @@ class InputFeatures(object):
         token_type_ids: Segment token indices to indicate first and second portions of the inputs.
     """
 
-    def __init__(
-        self,
-        input_ids,
-        attention_mask,
-        token_type_ids,
-        e1_mask,
-        e2_mask,
-        label_id: Union[int, None],
-    ):
-        self.input_ids = input_ids
-        self.attention_mask = attention_mask
-        self.token_type_ids = token_type_ids
-        self.label_id = label_id
-        self.e1_mask = e1_mask
-        self.e2_mask = e2_mask
-
-    def __repr__(self):
-        return str(self.to_json_string())
-
-    def to_dict(self):
-        """Serializes this instance to a Python dictionary."""
-        return copy.deepcopy(self.__dict__)
-
-    def to_json_string(self):
-        """Serializes this instance to a JSON string."""
-        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
-
 
 def encode_labels(
-    tokens: list[str], labels: list[int], tokenizer, max_token_len
+    tokens: list[str], labels: list[int], tokenizer, max_token_len=128
 ) -> tuple[dict, np.ndarray]:
     """
     Encode list of tokens and labels into subwords.
@@ -97,7 +68,7 @@ def encode_labels(
     tokenizer : transformers.PretrainedTokenizer
         HuggingFace tokenizer
     max_token_len : int
-        TEMP
+        Cutoff length for number of tokens
 
     Returns
     -------
@@ -111,7 +82,7 @@ def encode_labels(
     >>> tokens = ['Testing', 'this', 'for', 'doctest', '.']
     >>> labels = [1, 0, 0, 0, 0]
     >>> tokenizer = AutoTokenizer.from_pretrained(
-    ...     Config.MODEL_NAME, add_prefix_space=True
+    ...     'roberta-base', add_prefix_space=True
     ... )
     >>> encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
 
@@ -351,14 +322,14 @@ def convert_examples_to_features(
         len(token_type_ids) == max_seq_len
     ), f"Error with token type length {len(token_type_ids)} vs {max_seq_len}"
 
-    return InputFeatures(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        token_type_ids=token_type_ids,
-        label_id=label_id,
-        e1_mask=e1_mask,
-        e2_mask=e2_mask,
-    )
+    return {
+        "input_ids": torch.tensor(input_ids, dtype=torch.long),
+        "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+        "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long),
+        "labels": torch.tensor(label_id, dtype=torch.long),
+        "e1_mask": torch.tensor(e1_mask, dtype=torch.long),
+        "e2_mask": torch.tensor(e2_mask, dtype=torch.long),
+    }
 
 
 if __name__ == "__main__":

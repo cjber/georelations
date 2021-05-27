@@ -11,25 +11,27 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from src.common.model_utils import Config, convert_examples_to_features, encode_labels
 from src.common.utils import PROJECT_ROOT
 
 
 class TextDataset(Dataset):
     def __init__(
         self,
-        text: list,
+        path: ValueNode,
         coref_model: str,
         tokenizer=AutoTokenizer,
     ):
         predictor = load_predictor(coref_model)
         predictor.cuda_device = 0 if torch.cuda.is_available else -1
 
-        self.text: list[str] = text
+        self.text: list[str] = []
+        with open(path, "r") as f:
+            for line in f:
+                self.text.append(line.strip())
         self.text = [predictor.coref_resolved(i) for i in tqdm(text)]
 
         self.tokenizer = tokenizer.from_pretrained(
-            Config.MODEL_NAME, add_prefix_space=True
+            self.model_name, add_prefix_space=True
         )
 
     def __len__(self):

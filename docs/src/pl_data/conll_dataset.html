@@ -36,7 +36,7 @@ import torch
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from src.common.model_utils import Config, encode_labels
+from src.common.model_utils import Label, encode_labels
 from src.common.utils import PROJECT_ROOT
 
 
@@ -45,17 +45,20 @@ class CoNLLDataset(Dataset):
         self,
         name: ValueNode,
         path: ValueNode,
+        model_name: ValueNode,
+        max_token_len: ValueNode,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
         self.path = path
         self.name = name
+        self.model_name = model_name
+        self.max_token_len = int(max_token_len)  # type: ignore
 
         self.data: list[dict[str, tuple[str]]] = self.read_conll()
         self.tokenizer = tokenizer.from_pretrained(
-            Config.MODEL_NAME, add_prefix_space=True
+            self.model_name, add_prefix_space=True
         )
-        self.max_token_len = Config.MAX_TOKEN_LEN
 
     def __len__(self) -&gt; int:
         return len(self.data)
@@ -63,9 +66,11 @@ class CoNLLDataset(Dataset):
     def __getitem__(self, index: int):
         tokens: list[str] = list(self.data[index][&#34;tokens&#34;])
         labels_id: list[int] = [
-            Config.GER_LABELS[label] for label in self.data[index][&#34;tags&#34;]
+            Label(&#34;GER&#34;).labels[label] for label in self.data[index][&#34;tags&#34;]
         ]
-        encoding, labels_encoded = encode_labels(tokens, labels_id, self.tokenizer)
+        encoding, labels_encoded = encode_labels(
+            tokens, labels_id, self.tokenizer, self.max_token_len
+        )
         return dict(
             input_ids=encoding[&#34;input_ids&#34;].flatten(),
             attention_mask=encoding[&#34;attention_mask&#34;].flatten(),
@@ -73,7 +78,14 @@ class CoNLLDataset(Dataset):
         )
 
     def __repr__(self) -&gt; str:
-        return f&#34;MyDataset({self.name=}, {self.path=})&#34;
+        return (
+            f&#34;CoNLLDataset(&#34;
+            f&#34;{self.name=}, &#34;
+            f&#34;{self.path=}, &#34;
+            f&#34;{self.model_name=}, &#34;
+            f&#34;{self.max_token_len=}, &#34;
+            f&#34;{self.tokenizer=})&#34;
+        )
 
     def read_conll(self) -&gt; list[dict[str, tuple[str]]]:
         with open(self.path, &#34;r&#34;) as conll_file:  # type: ignore
@@ -94,7 +106,7 @@ class CoNLLDataset(Dataset):
 
 @hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;default&#34;)
 def main(cfg: omegaconf.DictConfig):
-    dataset: CoNLLDataset = hydra.utils.instantiate(
+    dataset: CoNLLDataset = hydra.utils.instantiate(  # type: ignore
         cfg.data.datamodule.datasets.train, _recursive_=False
     )
 
@@ -121,7 +133,7 @@ if __name__ == &#34;__main__&#34;:
 </summary>
 <pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;default&#34;)
 def main(cfg: omegaconf.DictConfig):
-    dataset: CoNLLDataset = hydra.utils.instantiate(
+    dataset: CoNLLDataset = hydra.utils.instantiate(  # type: ignore
         cfg.data.datamodule.datasets.train, _recursive_=False
     )</code></pre>
 </details>
@@ -133,7 +145,7 @@ def main(cfg: omegaconf.DictConfig):
 <dl>
 <dt id="src.pl_data.conll_dataset.CoNLLDataset"><code class="flex name class">
 <span>class <span class="ident">CoNLLDataset</span></span>
-<span>(</span><span>name: omegaconf.nodes.ValueNode, path: omegaconf.nodes.ValueNode, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
+<span>(</span><span>name: omegaconf.nodes.ValueNode, path: omegaconf.nodes.ValueNode, model_name: omegaconf.nodes.ValueNode, max_token_len: omegaconf.nodes.ValueNode, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>An abstract class representing a :class:<code>Dataset</code>.</p>
@@ -159,17 +171,20 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
         self,
         name: ValueNode,
         path: ValueNode,
+        model_name: ValueNode,
+        max_token_len: ValueNode,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
         self.path = path
         self.name = name
+        self.model_name = model_name
+        self.max_token_len = int(max_token_len)  # type: ignore
 
         self.data: list[dict[str, tuple[str]]] = self.read_conll()
         self.tokenizer = tokenizer.from_pretrained(
-            Config.MODEL_NAME, add_prefix_space=True
+            self.model_name, add_prefix_space=True
         )
-        self.max_token_len = Config.MAX_TOKEN_LEN
 
     def __len__(self) -&gt; int:
         return len(self.data)
@@ -177,9 +192,11 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
     def __getitem__(self, index: int):
         tokens: list[str] = list(self.data[index][&#34;tokens&#34;])
         labels_id: list[int] = [
-            Config.GER_LABELS[label] for label in self.data[index][&#34;tags&#34;]
+            Label(&#34;GER&#34;).labels[label] for label in self.data[index][&#34;tags&#34;]
         ]
-        encoding, labels_encoded = encode_labels(tokens, labels_id, self.tokenizer)
+        encoding, labels_encoded = encode_labels(
+            tokens, labels_id, self.tokenizer, self.max_token_len
+        )
         return dict(
             input_ids=encoding[&#34;input_ids&#34;].flatten(),
             attention_mask=encoding[&#34;attention_mask&#34;].flatten(),
@@ -187,7 +204,14 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
         )
 
     def __repr__(self) -&gt; str:
-        return f&#34;MyDataset({self.name=}, {self.path=})&#34;
+        return (
+            f&#34;CoNLLDataset(&#34;
+            f&#34;{self.name=}, &#34;
+            f&#34;{self.path=}, &#34;
+            f&#34;{self.model_name=}, &#34;
+            f&#34;{self.max_token_len=}, &#34;
+            f&#34;{self.tokenizer=})&#34;
+        )
 
     def read_conll(self) -&gt; list[dict[str, tuple[str]]]:
         with open(self.path, &#34;r&#34;) as conll_file:  # type: ignore

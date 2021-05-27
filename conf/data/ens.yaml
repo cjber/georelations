@@ -1,0 +1,10 @@
+datamodule:
+  _target_: src.pl_data.datamodule.DataModule
+
+  datasets:
+    _target_: src.pl_data.conll_dataset.TextDataset
+    name: TrainGERData
+    path: 'data/wiki_corefs.txt'
+    coref_model: 'coref-spanbert'
+    model_name: ${oc.env:MODEL_NAME}
+    max_token_len: ${oc.env:MAX_TOKEN_LEN}

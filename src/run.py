@@ -58,7 +58,10 @@ def run(cfg: DictConfig) -> None:
     """
     Generic train loop
 
-    :param cfg: run configuration, defined by Hydra in /conf
+    Parameters
+    ----------
+    cfg : DictConfig
+        Run configuration, defined by Hydra in /conf
     """
     if cfg.train.deterministic:
         seed_everything(cfg.train.random_seed)
@@ -108,12 +111,6 @@ def run(cfg: DictConfig) -> None:
             **wandb_config,
             tags=cfg.core.tags,
         )
-        # hydra.utils.log.info(f"W&B is now watching <{cfg.logging.wandb_watch.log}>!")
-        # wandb_logger.watch(
-        #     model,
-        #     log=cfg.logging.wandb_watch.log,
-        #     log_freq=cfg.logging.wandb_watch.log_freq,
-        # )
 
     # Store the YaML config separately into the wandb dir
     yaml_conf: str = OmegaConf.to_yaml(cfg=cfg)
@@ -135,9 +132,6 @@ def run(cfg: DictConfig) -> None:
 
     hydra.utils.log.info("Starting training!")
     trainer.fit(model=model, datamodule=datamodule)
-
-    # hydra.utils.log.info("Starting testing!")
-    # trainer.test(model=model, datamodule=datamodule)
 
     # Logger closing to release resources/avoid multi-run conflicts
     if wandb_logger is not None:

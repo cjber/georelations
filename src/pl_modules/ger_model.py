@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 from torch.optim import Optimizer
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
-from src.common.model_utils import Config, Label, combine_biluo, combine_subwords
+from src.common.model_utils import Label, combine_biluo, combine_subwords
 from src.common.utils import PROJECT_ROOT
 from src.pl_metric.metric import Seqeval
 

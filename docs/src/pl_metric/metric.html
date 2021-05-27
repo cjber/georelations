@@ -31,7 +31,7 @@ from pytorch_lightning.metrics import Metric
 from seqeval.metrics import accuracy_score, classification_report
 from seqeval.scheme import BILOU
 
-from src.common.model_utils import Config
+from src.common.model_utils import Label
 
 
 class Seqeval(Metric):
@@ -62,10 +62,10 @@ class Seqeval(Metric):
             ]
 
             pred_bioul.append(
-                [Config.GER_IDX[pred] for pred in pred_seq[true_labels_idx]]
+                [Label(&#34;GER&#34;).idx[pred] for pred in pred_seq[true_labels_idx]]
             )
             target_bioul.append(
-                [Config.GER_IDX[lab] for lab in target_seq[true_labels_idx]]
+                [Label(&#34;GER&#34;).idx[lab] for lab in target_seq[true_labels_idx]]
             )
 
         report: dict = classification_report(
@@ -141,10 +141,10 @@ class Seqeval(Metric):
             ]
 
             pred_bioul.append(
-                [Config.GER_IDX[pred] for pred in pred_seq[true_labels_idx]]
+                [Label(&#34;GER&#34;).idx[pred] for pred in pred_seq[true_labels_idx]]
             )
             target_bioul.append(
-                [Config.GER_IDX[lab] for lab in target_seq[true_labels_idx]]
+                [Label(&#34;GER&#34;).idx[lab] for lab in target_seq[true_labels_idx]]
             )
 
         report: dict = classification_report(
@@ -213,10 +213,10 @@ synchronized across the distributed backend.</p></div>
         ]
 
         pred_bioul.append(
-            [Config.GER_IDX[pred] for pred in pred_seq[true_labels_idx]]
+            [Label(&#34;GER&#34;).idx[pred] for pred in pred_seq[true_labels_idx]]
         )
         target_bioul.append(
-            [Config.GER_IDX[lab] for lab in target_seq[true_labels_idx]]
+            [Label(&#34;GER&#34;).idx[lab] for lab in target_seq[true_labels_idx]]
         )
 
     report: dict = classification_report(

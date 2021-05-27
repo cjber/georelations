@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.optim import Optimizer
 from transformers import AutoModel
 
-from src.common.model_utils import Config, Label
+from src.common.model_utils import Label
 from src.common.utils import PROJECT_ROOT
 
 
@@ -28,12 +28,13 @@ class FCLayer(nn.Module):
 
 
 class RBERT(pl.LightningModule):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, model_name, *args, **kwargs) -> None:
         super().__init__()
         self.save_hyperparameters()
+        self.model_name = model_name
 
         self.model = AutoModel.from_pretrained(
-            Config.MODEL_NAME,
+            self.model_name,
             num_labels=Label("REL").count,
             return_dict=True,
             output_attentions=False,

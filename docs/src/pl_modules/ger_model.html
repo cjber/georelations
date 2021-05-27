@@ -34,22 +34,23 @@ import pytorch_lightning as pl
 from torch.optim import Optimizer
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
-from src.common.model_utils import Config, combine_biluo, combine_subwords
+from src.common.model_utils import Label, combine_biluo, combine_subwords
 from src.common.utils import PROJECT_ROOT
 from src.pl_metric.metric import Seqeval
 
 
 class GERModel(pl.LightningModule):
-    def __init__(self, *args, **kwargs) -&gt; None:
+    def __init__(self, model_name, *args, **kwargs) -&gt; None:
         super().__init__()
         self.save_hyperparameters()
+        self.model_name = model_name
 
         self.train_metric = Seqeval()
         self.val_metric = Seqeval()
 
         self.model = AutoModelForTokenClassification.from_pretrained(
-            Config.MODEL_NAME,
-            num_labels=Config.GER_NUM,
+            self.model_name,
+            num_labels=Label(&#34;GER&#34;).count,
             return_dict=True,
             output_attentions=False,
         )
@@ -68,7 +69,7 @@ class GERModel(pl.LightningModule):
 
         if labels is None:
             tokenizer = AutoTokenizer.from_pretrained(
-                Config.MODEL_NAME, add_prefix_space=True
+                self.model_name, add_prefix_space=True
             )
             batch_out = []
             for id_batch, logit_batch in zip(input_ids, outputs[&#34;logits&#34;]):
@@ -222,7 +223,7 @@ def main(cfg: omegaconf.DictConfig):
 <dl>
 <dt id="src.pl_modules.ger_model.GERModel"><code class="flex name class">
 <span>class <span class="ident">GERModel</span></span>
-<span>(</span><span>*args, **kwargs)</span>
+<span>(</span><span>model_name, *args, **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Helper class that provides a standard way to create an ABC using
@@ -232,16 +233,17 @@ inheritance.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GERModel(pl.LightningModule):
-    def __init__(self, *args, **kwargs) -&gt; None:
+    def __init__(self, model_name, *args, **kwargs) -&gt; None:
         super().__init__()
         self.save_hyperparameters()
+        self.model_name = model_name
 
         self.train_metric = Seqeval()
         self.val_metric = Seqeval()
 
         self.model = AutoModelForTokenClassification.from_pretrained(
-            Config.MODEL_NAME,
-            num_labels=Config.GER_NUM,
+            self.model_name,
+            num_labels=Label(&#34;GER&#34;).count,
             return_dict=True,
             output_attentions=False,
         )
@@ -260,7 +262,7 @@ inheritance.</p></div>
 
         if labels is None:
             tokenizer = AutoTokenizer.from_pretrained(
-                Config.MODEL_NAME, add_prefix_space=True
+                self.model_name, add_prefix_space=True
             )
             batch_out = []
             for id_batch, logit_batch in zip(input_ids, outputs[&#34;logits&#34;]):
@@ -491,7 +493,7 @@ this method in order to compute the output predictions and the loss.</p>
 
     if labels is None:
         tokenizer = AutoTokenizer.from_pretrained(
-            Config.MODEL_NAME, add_prefix_space=True
+            self.model_name, add_prefix_space=True
         )
         batch_out = []
         for id_batch, logit_batch in zip(input_ids, outputs[&#34;logits&#34;]):
