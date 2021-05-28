@@ -76,6 +76,7 @@ def run(cfg: DictConfig) -> None:
         )
         # Debuggers don't like GPUs nor multiprocessing
         cfg.train.pl_trainer.gpus = 0
+        cfg.train.pl_trainer.auto_select_gpus = False
         cfg.data.datamodule.num_workers.train = 0
         cfg.data.datamodule.num_workers.val = 0
         cfg.data.datamodule.num_workers.test = 0
