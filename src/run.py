@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.loggers import WandbLogger
 
-from src.common.utils import PROJECT_ROOT, log_hyperparameters
+from src.common.utils import PROJECT_ROOT, get_env, log_hyperparameters
 
 
 def build_callbacks(cfg: DictConfig) -> List[Callback]:
@@ -83,6 +83,15 @@ def run(cfg: DictConfig) -> None:
         cfg.logging.wandb.mode = "offline"
 
         # use toy data
+        val_data = []
+        for data in cfg.data.datamodule.datasets.val:
+            data.path = data.path.replace("data/train", "tests/toy_data")
+            val_data.append(data)
+        cfg.data.datamodule.datasets.val = val_data
+        cfg.data.datamodule.datasets.train.path.replace(
+            "data/train",
+            "tests/toy_data",
+        )
 
     # Hydra run directory
     hydra_dir = Path(HydraConfig.get().run.dir)
