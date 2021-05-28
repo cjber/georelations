@@ -1,4 +1,4 @@
-name: make-dev
+name: make-doctest
 on:
   push:
     branches:
@@ -26,7 +26,5 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run dev runs
-        run: |
-          make dev-ger
-          make dev-rel
+      - name: Run doctest
+        run: make doctest

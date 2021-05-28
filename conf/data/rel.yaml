@@ -3,7 +3,7 @@ datamodule:
 
   datasets:
     train:
-      _target_: src.pl_data.dataset.CSVDataset
+      _target_: src.pl_data.csv_dataset.CSVDataset
       name: TrainRELData
       model_name: ${oc.env:MODEL_NAME}
       max_token_len: ${oc.env:MAX_TOKEN_LEN}
@@ -11,7 +11,7 @@ datamodule:
       special_tokens: ${oc.env:SPECIAL_TOKENS}
 
     val:
-      - _target_: src.pl_data.dataset.CSVDataset
+      - _target_: src.pl_data.csv_dataset.CSVDataset
         name: ValRELData
         model_name: ${oc.env:MODEL_NAME}
         max_token_len: ${oc.env:MAX_TOKEN_LEN}
@@ -24,6 +24,6 @@ datamodule:
     test: 4
 
   batch_size:
-    train: 2
-    val: 2
-    test: 2
+    train: 8
+    val: 8
+    test: 8

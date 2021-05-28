@@ -1,11 +1,11 @@
 val_check_interval: 1.0
-progress_bar_refresh_rate: 20
+progress_bar_refresh_rate: 1
 
 wandb:
   project: georelations
   entity: null
   log_model: False
-  mode: 'online'
+  mode: 'offline'
 
 lr_monitor:
   logging_interval: "step"

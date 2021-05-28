@@ -1,0 +1,2 @@
+ger_model: "${oc.env:PROJECT_ROOT}/ckpts/ger_model.ckpt"
+rel_model: "${oc.env:PROJECT_ROOT}/ckpts/rel_model.ckpt"

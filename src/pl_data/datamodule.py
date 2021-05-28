@@ -12,24 +12,6 @@ from torch.utils.data import DataLoader, Dataset
 from src.common.utils import PROJECT_ROOT
 
 
-def worker_init_fn(id: int):
-    """
-    DataLoaders workers init function.
-
-    Initialize the numpy.random seed correctly for each worker, so that
-    random augmentations between workers and/or epochs are not identical.
-
-    If a global seed is set, the augmentations are deterministic.
-
-    https://pytorch.org/docs/stable/notes/randomness.html#dataloader
-    """
-    uint64_seed = torch.initial_seed()
-    ss = np.random.SeedSequence([uint64_seed])
-    # More than 128 bits (4 32-bit words) would be overkill.
-    np.random.seed(ss.generate_state(4))
-    random.seed(uint64_seed)
-
-
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
@@ -66,7 +48,6 @@ class DataModule(pl.LightningDataModule):
             shuffle=True,
             batch_size=self.batch_size.train,
             num_workers=self.num_workers.train,
-            worker_init_fn=worker_init_fn,
         )
 
     def val_dataloader(self) -> Sequence[DataLoader]:
@@ -76,7 +57,6 @@ class DataModule(pl.LightningDataModule):
                 shuffle=False,
                 batch_size=self.batch_size.val,
                 num_workers=self.num_workers.val,
-                worker_init_fn=worker_init_fn,
             )
             for dataset in self.val_datasets
         ]

@@ -1,0 +1,9 @@
+# metadata specialised for each experiment
+core:
+  version: 0.0.1
+  tags:
+    - ens_model
+
+defaults:
+  - data: ens
+  - model: ens

@@ -48,6 +48,9 @@ def build_callbacks(cfg: DictConfig) -> List[Callback]:
                 mode=cfg.train.monitor_metric_mode,
                 save_top_k=cfg.train.model_checkpoints.save_top_k,
                 verbose=cfg.train.model_checkpoints.verbose,
+                filename=str(
+                    (Path(cfg.train.model_checkpoints.filepath) / cfg.core.tags[0])
+                ),
             )
         )
 
@@ -64,7 +67,7 @@ def run(cfg: DictConfig) -> None:
         Run configuration, defined by Hydra in /conf
     """
     if cfg.train.deterministic:
-        seed_everything(cfg.train.random_seed)
+        seed_everything(cfg.train.random_seed, workers=True)
 
     if cfg.train.pl_trainer.fast_dev_run:
         hydra.utils.log.info(
@@ -138,7 +141,7 @@ def run(cfg: DictConfig) -> None:
         wandb_logger.experiment.finish()
 
 
-@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="default")
+@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="ger")
 def main(cfg: omegaconf.DictConfig):
     run(cfg)
 

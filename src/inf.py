@@ -1,9 +1,12 @@
+import hydra
+from omegaconf.dictconfig import DictConfig, ValueNode
 import pytorch_lightning as pl
 import torch
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
 from src.common.utils import load_envs
+from src.common.utils import PROJECT_ROOT
 from src.pl_data.text_dataset import TextDataset
 from src.pl_modules.ensemble import RelationEnsemble
 from src.pl_modules.ger_model import GERModel
@@ -22,32 +25,37 @@ def load_pretrained_model(model, checkpoint, device):
     return model
 
 
-def load_dataset(datadir: str, coref_model: str):
-    text = []
-    with open(datadir, "r") as f:
-        for line in f:
-            text.append(line.strip())
-    ds = TextDataset(text=text, coref_model=coref_model)
+def load_dataset(datadir: ValueNode, coref_model: str):
+    ds = TextDataset(path=datadir, coref_model=coref_model)
     return DataLoader(dataset=ds, batch_size=64, shuffle=True)
 
 
-def run():
-    ger_model = load_pretrained_model(GERModel, "models/ger_model.ckpt", "cuda")
-    rel_model = load_pretrained_model(RBERT, "models/rel_model.ckpt", "cuda")
+def run(cfg: DictConfig):
+    breakpoint()
+    ger_model = load_pretrained_model(GERModel, cfg.model.ger_model, "cuda")
+    rel_model = load_pretrained_model(RBERT, cfg.model.rel_model, "cuda")
 
     model = RelationEnsemble(ger_model, rel_model)
     model = model.to("cuda")
 
-    dl = load_dataset(
-        datadir="labelling/ldata/wiki_corefs.txt", coref_model="coref-spanbert"
-    )
+    dl = load_dataset(datadir=cfg.data.path, coref_model="coref-spanbert")
     preds = [
         model(item["input_ids"].to("cuda"), item["attention_mask"].to("cuda"))
         for item in tqdm(dl)
     ]
 
+    breakpoint()
     text = preds[0][0][5]
     rel = preds[0][1][5]
     e1 = text.split("<e1>")[1].split("</e1>")[0].strip()
     e2 = text.split("<e2>")[1].split("</e2>")[0].strip()
     triple = (e1, e2, rel)
+
+
+@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="ens")
+def main(cfg: DictConfig):
+    run(cfg)
+
+
+if __name__ == "__main__":
+    main()

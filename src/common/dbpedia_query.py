@@ -63,3 +63,9 @@ def clean_text(csv):
     csv = csv[~csv["text"].str.contains("South Georgia")]
     csv = csv[csv["text"].str.len() > 50]  # remove very short abstracts
     return csv
+
+
+if __name__ == "__main__":
+    csv = dbpedia_query(100_000)
+    csv = clean_text(csv)
+    csv.to_csv("data/wikipedia.csv", index=False)  # TODO: use Pathlib central config

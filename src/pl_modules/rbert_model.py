@@ -154,17 +154,19 @@ class RBERT(pl.LightningModule):
         ]
 
         opt = hydra.utils.instantiate(
-            self.cfg.optim.optimizer, params=optimizer_grouped_parameters
+            self.hparams.optim.optimizer,
+            params=optimizer_grouped_parameters,
+            _convert_="partial",
         )
 
-        if self.cfg.optim.use_lr_scheduler:
+        if self.hparams.optim.use_lr_scheduler:
             scheduler = hydra.utils.instantiate(
-                self.cfg.optim.lr_scheduler, optimizer=opt
+                self.hparams.optim.lr_scheduler, optimizer=opt
             )
             return {
                 "optimizer": opt,
                 "lr_scheduler": scheduler,
-                "monitor": self.cfg.train.monitor_metric,
+                "monitor": self.hparams.optim.monitor_metric,
             }
 
         return opt
