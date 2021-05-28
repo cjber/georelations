@@ -88,9 +88,11 @@ def run(cfg: DictConfig) -> None:
             data.path = data.path.replace("data/train", "tests/toy_data")
             val_data.append(data)
         cfg.data.datamodule.datasets.val = val_data
-        cfg.data.datamodule.datasets.train.path.replace(
-            "data/train",
-            "tests/toy_data",
+        cfg.data.datamodule.datasets.train.path = (
+            cfg.data.datamodule.datasets.train.path.replace(
+                "data/train",
+                "tests/toy_data",
+            )
         )
 
     # Hydra run directory
