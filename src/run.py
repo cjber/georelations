@@ -48,9 +48,7 @@ def build_callbacks(cfg: DictConfig) -> List[Callback]:
                 mode=cfg.train.monitor_metric_mode,
                 save_top_k=cfg.train.model_checkpoints.save_top_k,
                 verbose=cfg.train.model_checkpoints.verbose,
-                filename=str(
-                    (Path(cfg.train.model_checkpoints.filepath) / cfg.core.tags[0])
-                ),
+                # filename=str( (Path(cfg.train.model_checkpoints.filepath) / cfg.core.tags[0])),
             )
         )
 
@@ -83,6 +81,8 @@ def run(cfg: DictConfig) -> None:
 
         # Switch wandb mode to offline to prevent online logging
         cfg.logging.wandb.mode = "offline"
+
+        # use toy data
 
     # Hydra run directory
     hydra_dir = Path(HydraConfig.get().run.dir)

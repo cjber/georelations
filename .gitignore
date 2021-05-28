@@ -3,6 +3,7 @@
 /wandb
 /experiments
 /ckpts
+/typings
 
 # .gitignore defaults for python and pycharm
 .idea
@@ -114,6 +115,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.env
 .venv
 env/
 venv/

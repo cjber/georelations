@@ -32,7 +32,6 @@ import hydra
 import omegaconf
 from omegaconf import ValueNode
 import pandas as pd
-import torch
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
@@ -76,7 +75,7 @@ class CSVDataset(Dataset):
         )
 
 
-@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;default&#34;)
+@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;rel&#34;)
 def main(cfg: omegaconf.DictConfig):
     dataset: CSVDataset = hydra.utils.instantiate(
         cfg.data.datamodule.datasets.train, _recursive_=False
@@ -103,7 +102,7 @@ if __name__ == &#34;__main__&#34;:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;default&#34;)
+<pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;rel&#34;)
 def main(cfg: omegaconf.DictConfig):
     dataset: CSVDataset = hydra.utils.instantiate(
         cfg.data.datamodule.datasets.train, _recursive_=False

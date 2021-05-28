@@ -26,12 +26,15 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import pytorch_lightning as pl
+<pre><code class="python">import hydra
+from omegaconf.dictconfig import DictConfig, ValueNode
+import pytorch_lightning as pl
 import torch
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
 from src.common.utils import load_envs
+from src.common.utils import PROJECT_ROOT
 from src.pl_data.text_dataset import TextDataset
 from src.pl_modules.ensemble import RelationEnsemble
 from src.pl_modules.ger_model import GERModel
@@ -50,35 +53,40 @@ def load_pretrained_model(model, checkpoint, device):
     return model
 
 
-def load_dataset(datadir: str, coref_model: str):
-    text = []
-    with open(datadir, &#34;r&#34;) as f:
-        for line in f:
-            text.append(line.strip())
-    ds = TextDataset(text=text, coref_model=coref_model)
+def load_dataset(datadir: ValueNode, coref_model: str):
+    ds = TextDataset(path=datadir, coref_model=coref_model)
     return DataLoader(dataset=ds, batch_size=64, shuffle=True)
 
 
-def run():
-    ger_model = load_pretrained_model(GERModel, &#34;models/ger_model.ckpt&#34;, &#34;cuda&#34;)
-    rel_model = load_pretrained_model(RBERT, &#34;models/rel_model.ckpt&#34;, &#34;cuda&#34;)
+def run(cfg: DictConfig):
+    breakpoint()
+    ger_model = load_pretrained_model(GERModel, cfg.model.ger_model, &#34;cuda&#34;)
+    rel_model = load_pretrained_model(RBERT, cfg.model.rel_model, &#34;cuda&#34;)
 
     model = RelationEnsemble(ger_model, rel_model)
     model = model.to(&#34;cuda&#34;)
 
-    dl = load_dataset(
-        datadir=&#34;labelling/ldata/wiki_corefs.txt&#34;, coref_model=&#34;coref-spanbert&#34;
-    )
+    dl = load_dataset(datadir=cfg.data.path, coref_model=&#34;coref-spanbert&#34;)
     preds = [
         model(item[&#34;input_ids&#34;].to(&#34;cuda&#34;), item[&#34;attention_mask&#34;].to(&#34;cuda&#34;))
         for item in tqdm(dl)
     ]
 
+    breakpoint()
     text = preds[0][0][5]
     rel = preds[0][1][5]
     e1 = text.split(&#34;&lt;e1&gt;&#34;)[1].split(&#34;&lt;/e1&gt;&#34;)[0].strip()
     e2 = text.split(&#34;&lt;e2&gt;&#34;)[1].split(&#34;&lt;/e2&gt;&#34;)[0].strip()
-    triple = (e1, e2, rel)</code></pre>
+    triple = (e1, e2, rel)
+
+
+@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;ens&#34;)
+def main(cfg: DictConfig):
+    run(cfg)
+
+
+if __name__ == &#34;__main__&#34;:
+    main()</code></pre>
 </details>
 </section>
 <section>
@@ -89,7 +97,7 @@ def run():
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="src.inf.load_dataset"><code class="name flex">
-<span>def <span class="ident">load_dataset</span></span>(<span>datadir: str, coref_model: str)</span>
+<span>def <span class="ident">load_dataset</span></span>(<span>datadir: omegaconf.nodes.ValueNode, coref_model: str)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -97,12 +105,8 @@ def run():
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def load_dataset(datadir: str, coref_model: str):
-    text = []
-    with open(datadir, &#34;r&#34;) as f:
-        for line in f:
-            text.append(line.strip())
-    ds = TextDataset(text=text, coref_model=coref_model)
+<pre><code class="python">def load_dataset(datadir: ValueNode, coref_model: str):
+    ds = TextDataset(path=datadir, coref_model=coref_model)
     return DataLoader(dataset=ds, batch_size=64, shuffle=True)</code></pre>
 </details>
 </dd>
@@ -123,8 +127,8 @@ def run():
     return model</code></pre>
 </details>
 </dd>
-<dt id="src.inf.run"><code class="name flex">
-<span>def <span class="ident">run</span></span>(<span>)</span>
+<dt id="src.inf.main"><code class="name flex">
+<span>def <span class="ident">main</span></span>(<span>cfg: omegaconf.dictconfig.DictConfig)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -132,21 +136,35 @@ def run():
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def run():
-    ger_model = load_pretrained_model(GERModel, &#34;models/ger_model.ckpt&#34;, &#34;cuda&#34;)
-    rel_model = load_pretrained_model(RBERT, &#34;models/rel_model.ckpt&#34;, &#34;cuda&#34;)
+<pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;ens&#34;)
+def main(cfg: DictConfig):
+    run(cfg)</code></pre>
+</details>
+</dd>
+<dt id="src.inf.run"><code class="name flex">
+<span>def <span class="ident">run</span></span>(<span>cfg: omegaconf.dictconfig.DictConfig)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def run(cfg: DictConfig):
+    breakpoint()
+    ger_model = load_pretrained_model(GERModel, cfg.model.ger_model, &#34;cuda&#34;)
+    rel_model = load_pretrained_model(RBERT, cfg.model.rel_model, &#34;cuda&#34;)
 
     model = RelationEnsemble(ger_model, rel_model)
     model = model.to(&#34;cuda&#34;)
 
-    dl = load_dataset(
-        datadir=&#34;labelling/ldata/wiki_corefs.txt&#34;, coref_model=&#34;coref-spanbert&#34;
-    )
+    dl = load_dataset(datadir=cfg.data.path, coref_model=&#34;coref-spanbert&#34;)
     preds = [
         model(item[&#34;input_ids&#34;].to(&#34;cuda&#34;), item[&#34;attention_mask&#34;].to(&#34;cuda&#34;))
         for item in tqdm(dl)
     ]
 
+    breakpoint()
     text = preds[0][0][5]
     rel = preds[0][1][5]
     e1 = text.split(&#34;&lt;e1&gt;&#34;)[1].split(&#34;&lt;/e1&gt;&#34;)[0].strip()
@@ -174,6 +192,7 @@ def run():
 <ul class="">
 <li><code><a title="src.inf.load_dataset" href="#src.inf.load_dataset">load_dataset</a></code></li>
 <li><code><a title="src.inf.load_pretrained_model" href="#src.inf.load_pretrained_model">load_pretrained_model</a></code></li>
+<li><code><a title="src.inf.main" href="#src.inf.main">main</a></code></li>
 <li><code><a title="src.inf.run" href="#src.inf.run">run</a></code></li>
 </ul>
 </li>

@@ -29,7 +29,6 @@
 <pre><code class="python">import itertools
 
 import pytorch_lightning as pl
-import torch
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from src.common.model_utils import (
@@ -75,28 +74,7 @@ class RelationEnsemble(pl.LightningModule):
                 )
                 for item in sequence_list
             ]
-            rel_in = {
-                &#34;input_ids&#34;: torch.tensor(
-                    [f.input_ids for f in features], dtype=torch.long, device=&#34;cuda&#34;
-                ),
-                &#34;attention_mask&#34;: torch.tensor(
-                    [f.attention_mask for f in features],
-                    dtype=torch.long,
-                    device=&#34;cuda&#34;,
-                ),
-                &#34;token_type_ids&#34;: torch.tensor(
-                    [f.token_type_ids for f in features],
-                    dtype=torch.long,
-                    device=&#34;cuda&#34;,
-                ),
-                &#34;e1_mask&#34;: torch.tensor(
-                    [f.e1_mask for f in features], dtype=torch.long, device=&#34;cuda&#34;
-                ),
-                &#34;e2_mask&#34;: torch.tensor(
-                    [f.e2_mask for f in features], dtype=torch.long, device=&#34;cuda&#34;
-                ),
-            }
-            rel_out = self.rel_model(**rel_in, labels=None)
+            rel_out = self.rel_model(**features, labels=None)
             return (
                 sequence_list,
                 [Label(&#34;REL&#34;).labels[rel] for rel in rel_out[0].argmax(dim=1).tolist()],
@@ -159,28 +137,7 @@ inheritance.</p></div>
                 )
                 for item in sequence_list
             ]
-            rel_in = {
-                &#34;input_ids&#34;: torch.tensor(
-                    [f.input_ids for f in features], dtype=torch.long, device=&#34;cuda&#34;
-                ),
-                &#34;attention_mask&#34;: torch.tensor(
-                    [f.attention_mask for f in features],
-                    dtype=torch.long,
-                    device=&#34;cuda&#34;,
-                ),
-                &#34;token_type_ids&#34;: torch.tensor(
-                    [f.token_type_ids for f in features],
-                    dtype=torch.long,
-                    device=&#34;cuda&#34;,
-                ),
-                &#34;e1_mask&#34;: torch.tensor(
-                    [f.e1_mask for f in features], dtype=torch.long, device=&#34;cuda&#34;
-                ),
-                &#34;e2_mask&#34;: torch.tensor(
-                    [f.e2_mask for f in features], dtype=torch.long, device=&#34;cuda&#34;
-                ),
-            }
-            rel_out = self.rel_model(**rel_in, labels=None)
+            rel_out = self.rel_model(**features, labels=None)
             return (
                 sequence_list,
                 [Label(&#34;REL&#34;).labels[rel] for rel in rel_out[0].argmax(dim=1).tolist()],
@@ -285,28 +242,7 @@ def forward(self, batch):
             )
             for item in sequence_list
         ]
-        rel_in = {
-            &#34;input_ids&#34;: torch.tensor(
-                [f.input_ids for f in features], dtype=torch.long, device=&#34;cuda&#34;
-            ),
-            &#34;attention_mask&#34;: torch.tensor(
-                [f.attention_mask for f in features],
-                dtype=torch.long,
-                device=&#34;cuda&#34;,
-            ),
-            &#34;token_type_ids&#34;: torch.tensor(
-                [f.token_type_ids for f in features],
-                dtype=torch.long,
-                device=&#34;cuda&#34;,
-            ),
-            &#34;e1_mask&#34;: torch.tensor(
-                [f.e1_mask for f in features], dtype=torch.long, device=&#34;cuda&#34;
-            ),
-            &#34;e2_mask&#34;: torch.tensor(
-                [f.e2_mask for f in features], dtype=torch.long, device=&#34;cuda&#34;
-            ),
-        }
-        rel_out = self.rel_model(**rel_in, labels=None)
+        rel_out = self.rel_model(**features, labels=None)
         return (
             sequence_list,
             [Label(&#34;REL&#34;).labels[rel] for rel in rel_out[0].argmax(dim=1).tolist()],

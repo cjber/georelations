@@ -6,16 +6,16 @@ import pytorch_lightning as pl
 from torch.optim import Optimizer
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
-from src.common.model_utils import Label, combine_biluo, combine_subwords
+from src.common.model_utils import Const, Label, combine_biluo, combine_subwords
 from src.common.utils import PROJECT_ROOT
 from src.pl_metric.metric import Seqeval
 
 
 class GERModel(pl.LightningModule):
-    def __init__(self, model_name, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__()
         self.save_hyperparameters()
-        self.model_name = model_name
+        self.model_name = Const.MODEL_NAME
 
         self.train_metric = Seqeval()
         self.val_metric = Seqeval()

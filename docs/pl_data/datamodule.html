@@ -40,24 +40,6 @@ from torch.utils.data import DataLoader, Dataset
 from src.common.utils import PROJECT_ROOT
 
 
-def worker_init_fn(id: int):
-    &#34;&#34;&#34;
-    DataLoaders workers init function.
-
-    Initialize the numpy.random seed correctly for each worker, so that
-    random augmentations between workers and/or epochs are not identical.
-
-    If a global seed is set, the augmentations are deterministic.
-
-    https://pytorch.org/docs/stable/notes/randomness.html#dataloader
-    &#34;&#34;&#34;
-    uint64_seed = torch.initial_seed()
-    ss = np.random.SeedSequence([uint64_seed])
-    # More than 128 bits (4 32-bit words) would be overkill.
-    np.random.seed(ss.generate_state(4))
-    random.seed(uint64_seed)
-
-
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
@@ -94,7 +76,6 @@ class DataModule(pl.LightningDataModule):
             shuffle=True,
             batch_size=self.batch_size.train,
             num_workers=self.num_workers.train,
-            worker_init_fn=worker_init_fn,
         )
 
     def val_dataloader(self) -&gt; Sequence[DataLoader]:
@@ -104,7 +85,6 @@ class DataModule(pl.LightningDataModule):
                 shuffle=False,
                 batch_size=self.batch_size.val,
                 num_workers=self.num_workers.val,
-                worker_init_fn=worker_init_fn,
             )
             for dataset in self.val_datasets
         ]
@@ -150,37 +130,6 @@ def main(cfg: omegaconf.DictConfig):
     datamodule: pl.LightningDataModule = hydra.utils.instantiate(
         cfg.data, _recursive_=False
     )</code></pre>
-</details>
-</dd>
-<dt id="src.pl_data.datamodule.worker_init_fn"><code class="name flex">
-<span>def <span class="ident">worker_init_fn</span></span>(<span>id: int)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>DataLoaders workers init function.</p>
-<p>Initialize the numpy.random seed correctly for each worker, so that
-random augmentations between workers and/or epochs are not identical.</p>
-<p>If a global seed is set, the augmentations are deterministic.</p>
-<p><a href="https://pytorch.org/docs/stable/notes/randomness.html#dataloader">https://pytorch.org/docs/stable/notes/randomness.html#dataloader</a></p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def worker_init_fn(id: int):
-    &#34;&#34;&#34;
-    DataLoaders workers init function.
-
-    Initialize the numpy.random seed correctly for each worker, so that
-    random augmentations between workers and/or epochs are not identical.
-
-    If a global seed is set, the augmentations are deterministic.
-
-    https://pytorch.org/docs/stable/notes/randomness.html#dataloader
-    &#34;&#34;&#34;
-    uint64_seed = torch.initial_seed()
-    ss = np.random.SeedSequence([uint64_seed])
-    # More than 128 bits (4 32-bit words) would be overkill.
-    np.random.seed(ss.generate_state(4))
-    random.seed(uint64_seed)</code></pre>
 </details>
 </dd>
 </dl>
@@ -266,7 +215,6 @@ split transform and process the data</p></div>
             shuffle=True,
             batch_size=self.batch_size.train,
             num_workers=self.num_workers.train,
-            worker_init_fn=worker_init_fn,
         )
 
     def val_dataloader(self) -&gt; Sequence[DataLoader]:
@@ -276,7 +224,6 @@ split transform and process the data</p></div>
                 shuffle=False,
                 batch_size=self.batch_size.val,
                 num_workers=self.num_workers.val,
-                worker_init_fn=worker_init_fn,
             )
             for dataset in self.val_datasets
         ]
@@ -407,7 +354,6 @@ def train_dataloader(self):
         shuffle=True,
         batch_size=self.batch_size.train,
         num_workers=self.num_workers.train,
-        worker_init_fn=worker_init_fn,
     )</code></pre>
 </details>
 </dd>
@@ -467,7 +413,6 @@ will have an argument <code>dataloader_idx</code> which matches the order here.<
             shuffle=False,
             batch_size=self.batch_size.val,
             num_workers=self.num_workers.val,
-            worker_init_fn=worker_init_fn,
         )
         for dataset in self.val_datasets
     ]</code></pre>
@@ -492,7 +437,6 @@ will have an argument <code>dataloader_idx</code> which matches the order here.<
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="src.pl_data.datamodule.main" href="#src.pl_data.datamodule.main">main</a></code></li>
-<li><code><a title="src.pl_data.datamodule.worker_init_fn" href="#src.pl_data.datamodule.worker_init_fn">worker_init_fn</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>

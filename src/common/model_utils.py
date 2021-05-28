@@ -1,12 +1,16 @@
 from collections import Counter
 import torch
-import copy
-import json
 import string
 from typing import Union
 
 import numpy as np
 import pandas as pd
+
+
+class Const:
+    MODEL_NAME = "roberta-base"
+    MAX_TOKEN_LEN = 128
+    SPECIAL_TOKENS = ["<e1>", "</e1>", "<e2>", "</e2>"]
 
 
 class Label:

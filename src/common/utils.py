@@ -1,13 +1,10 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import dotenv
-import numpy as np
-import pytorch_lightning as pl
-import torch
-import pytorch_lightning as pl
 from omegaconf import DictConfig, OmegaConf
+import pytorch_lightning as pl
 
 
 def get_env(env_name: str, default: Optional[str] = None) -> str:
@@ -96,3 +93,5 @@ assert (
 ), "You must configure the PROJECT_ROOT environment variable in a .env file!"
 
 os.chdir(PROJECT_ROOT)
+
+

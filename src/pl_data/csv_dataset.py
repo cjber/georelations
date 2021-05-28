@@ -7,7 +7,7 @@ import pandas as pd
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from src.common.model_utils import Label, convert_examples_to_features
+from src.common.model_utils import Const, Label, convert_examples_to_features
 from src.common.utils import PROJECT_ROOT
 
 
@@ -16,9 +16,6 @@ class CSVDataset(Dataset):
         self,
         name: ValueNode,
         path: ValueNode,
-        model_name: ValueNode,
-        max_token_len: ValueNode,
-        special_tokens: ValueNode,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
@@ -26,9 +23,9 @@ class CSVDataset(Dataset):
         self.data: pd.DataFrame = pd.read_csv(
             path, header=None, names=["label", "text_a"]  # type: ignore
         )
-        self.model_name = model_name
-        self.max_token_len = int(max_token_len)
-        self.special_tokens: list[str] = literal_eval(special_tokens)
+        self.model_name = Const.MODEL_NAME
+        self.max_token_len = Const.MAX_TOKEN_LEN
+        self.special_tokens: list[str] = Const.SPECIAL_TOKENS
 
         self.tokenizer = tokenizer.from_pretrained(self.model_name)
         self.tokenizer.add_special_tokens(

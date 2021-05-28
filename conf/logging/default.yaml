@@ -4,7 +4,7 @@ progress_bar_refresh_rate: 1
 wandb:
   project: georelations
   entity: null
-  log_model: False
+  log_model: True
   mode: 'offline'
 
 lr_monitor:

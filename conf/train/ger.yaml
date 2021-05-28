@@ -20,9 +20,9 @@ monitor_metric_mode: "max"
 
 early_stopping:
   patience: 3
-  verbose: False
+  verbose: True
+  min_delta: 0.01
 
 model_checkpoints:
   save_top_k: 1
-  verbose: False
-  filepath: ${oc.env:CKPT_PATH}
+  verbose: True

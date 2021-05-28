@@ -182,17 +182,19 @@ class RBERT(pl.LightningModule):
         ]
 
         opt = hydra.utils.instantiate(
-            self.cfg.optim.optimizer, params=optimizer_grouped_parameters
+            self.hparams.optim.optimizer,
+            params=optimizer_grouped_parameters,
+            _convert_=&#34;partial&#34;,
         )
 
-        if self.cfg.optim.use_lr_scheduler:
+        if self.hparams.optim.use_lr_scheduler:
             scheduler = hydra.utils.instantiate(
-                self.cfg.optim.lr_scheduler, optimizer=opt
+                self.hparams.optim.lr_scheduler, optimizer=opt
             )
             return {
                 &#34;optimizer&#34;: opt,
                 &#34;lr_scheduler&#34;: scheduler,
-                &#34;monitor&#34;: self.cfg.train.monitor_metric,
+                &#34;monitor&#34;: self.hparams.optim.monitor_metric,
             }
 
         return opt
@@ -472,17 +474,19 @@ inheritance.</p></div>
         ]
 
         opt = hydra.utils.instantiate(
-            self.cfg.optim.optimizer, params=optimizer_grouped_parameters
+            self.hparams.optim.optimizer,
+            params=optimizer_grouped_parameters,
+            _convert_=&#34;partial&#34;,
         )
 
-        if self.cfg.optim.use_lr_scheduler:
+        if self.hparams.optim.use_lr_scheduler:
             scheduler = hydra.utils.instantiate(
-                self.cfg.optim.lr_scheduler, optimizer=opt
+                self.hparams.optim.lr_scheduler, optimizer=opt
             )
             return {
                 &#34;optimizer&#34;: opt,
                 &#34;lr_scheduler&#34;: scheduler,
-                &#34;monitor&#34;: self.cfg.train.monitor_metric,
+                &#34;monitor&#34;: self.hparams.optim.monitor_metric,
             }
 
         return opt</code></pre>
@@ -686,17 +690,19 @@ or want to monitor a custom metric, you can specify these in a lr_dict:</p>
     ]
 
     opt = hydra.utils.instantiate(
-        self.cfg.optim.optimizer, params=optimizer_grouped_parameters
+        self.hparams.optim.optimizer,
+        params=optimizer_grouped_parameters,
+        _convert_=&#34;partial&#34;,
     )
 
-    if self.cfg.optim.use_lr_scheduler:
+    if self.hparams.optim.use_lr_scheduler:
         scheduler = hydra.utils.instantiate(
-            self.cfg.optim.lr_scheduler, optimizer=opt
+            self.hparams.optim.lr_scheduler, optimizer=opt
         )
         return {
             &#34;optimizer&#34;: opt,
             &#34;lr_scheduler&#34;: scheduler,
-            &#34;monitor&#34;: self.cfg.train.monitor_metric,
+            &#34;monitor&#34;: self.hparams.optim.monitor_metric,
         }
 
     return opt</code></pre>

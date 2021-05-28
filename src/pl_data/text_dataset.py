@@ -1,16 +1,13 @@
-import itertools
-
 from allennlp_models.pretrained import load_predictor
 import hydra
 import omegaconf
-from omegaconf import DictConfig, ValueNode
-import pandas as pd
-from spacy.training import iob_to_biluo
+from omegaconf import ValueNode
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
+from common.model_utils import Const
 from src.common.utils import PROJECT_ROOT
 
 
@@ -31,7 +28,7 @@ class TextDataset(Dataset):
         self.text = [predictor.coref_resolved(i) for i in tqdm(text)]
 
         self.tokenizer = tokenizer.from_pretrained(
-            self.model_name, add_prefix_space=True
+            Const.MODEL_NAME, add_prefix_space=True
         )
 
     def __len__(self):
@@ -42,7 +39,7 @@ class TextDataset(Dataset):
         encoding = self.tokenizer(
             text,
             return_attention_mask=True,
-            max_length=Config.MAX_TOKEN_LEN,
+            max_length=Const.MAX_TOKEN_LEN,
             padding="max_length",
             truncation=True,
             return_tensors="pt",

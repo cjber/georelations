@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from src.common.model_utils import Label, encode_labels
+from src.common.model_utils import Const, Label, encode_labels
 from src.common.utils import PROJECT_ROOT
 
 
@@ -17,15 +17,13 @@ class CoNLLDataset(Dataset):
         self,
         name: ValueNode,
         path: ValueNode,
-        model_name: ValueNode,
-        max_token_len: ValueNode,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
         self.path = path
         self.name = name
-        self.model_name = model_name
-        self.max_token_len = int(max_token_len)  # type: ignore
+        self.model_name = Const.MODEL_NAME
+        self.max_token_len = Const.MAX_TOKEN_LEN
 
         self.data: list[dict[str, tuple[str]]] = self.read_conll()
         self.tokenizer = tokenizer.from_pretrained(

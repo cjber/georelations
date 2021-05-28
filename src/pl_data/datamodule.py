@@ -1,12 +1,9 @@
-import random
 from typing import Optional, Sequence
 
 import hydra
-import numpy as np
 from omegaconf import DictConfig
 import omegaconf
 import pytorch_lightning as pl
-import torch
 from torch.utils.data import DataLoader, Dataset
 
 from src.common.utils import PROJECT_ROOT

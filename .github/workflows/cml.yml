@@ -28,7 +28,6 @@ jobs:
           pip install -r requirements.txt
       - name: Run dev runs
         run: |
-          sed -i 's|export PROJECT_ROOT=.*|export PROJECT_ROOT="'`pwd`'"|' .env
-          sed -i 's|data/train|tests/toy_data|' .env
+          echo 'export PROJECT_ROOT="'`pwd`'"' > .env
           make dev-ger
           make dev-rel
