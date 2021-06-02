@@ -14,10 +14,10 @@ dev-%:
 	${PYTHON} -m src.run --config-name=${@:dev-%=%} \
 	    train.pl_trainer.fast_dev_run=True
 
-tests:
-## doctest: run doctests
-	pytest --doctest-modules src/common/model_utils.py \
-	    pytest
+pytest:
+## pytest: run pytest doctest and unit tests
+	pytest --doctest-modules src/common \
+	    && pytest
 
 clean:
 ## clean: remove all experiments and cache files
@@ -30,13 +30,14 @@ clean:
 docs:
 ## docs: build documentation automatically
 	rm -r docs \
-		&& pdoc --html --force --output-dir docs src \
-		&& mv docs/src/* docs/ \
-		&& rm -r docs/src
+	    && pdoc --html --force --output-dir docs src \
+	    && mv docs/src/* docs/ \
+	    && rm -r docs/src
 
-black:
-	black src --check
-## black: autolint all source files using black
+lint:
+## lint: lint check all source files using black and flake8
+	black src --check \
+	    && flake8 --ignore E501,W503 --max-complexity 7 src
 
 help:
 ## help: This helpful list of commands

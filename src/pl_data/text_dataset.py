@@ -25,7 +25,7 @@ class TextDataset(Dataset):
         with open(path, "r") as f:
             for line in f:
                 self.text.append(line.strip())
-        self.text = [predictor.coref_resolved(i) for i in tqdm(text)]
+        self.text = [predictor.coref_resolved(i) for i in tqdm(self.text)]
 
         self.tokenizer = tokenizer.from_pretrained(
             Const.MODEL_NAME, add_prefix_space=True
