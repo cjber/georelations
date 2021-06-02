@@ -74,9 +74,9 @@ class CoNLLDataset(Dataset):
         return data
 
 
-@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="default")
+@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="ger")
 def main(cfg: omegaconf.DictConfig):
-    dataset: CoNLLDataset = hydra.utils.instantiate(  # type: ignore
+    dataset: CoNLLDataset = hydra.utils.instantiate(
         cfg.data.datamodule.datasets.train, _recursive_=False
     )
 

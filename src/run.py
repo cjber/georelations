@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.loggers import WandbLogger
 
-from src.common.utils import PROJECT_ROOT, get_env, log_hyperparameters
+from src.common.utils import PROJECT_ROOT, log_hyperparameters
 
 
 def build_callbacks(cfg: DictConfig) -> List[Callback]:

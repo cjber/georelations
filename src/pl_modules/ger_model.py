@@ -148,7 +148,7 @@ class GERModel(pl.LightningModule):
 
 @hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="ger")
 def main(cfg: omegaconf.DictConfig):
-    model: pl.LightningModule = hydra.utils.instantiate(
+    model: GERModel = hydra.utils.instantiate(
         cfg.model,
         optim=cfg.optim,
         data=cfg.data,
