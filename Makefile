@@ -14,9 +14,10 @@ dev-%:
 	${PYTHON} -m src.run --config-name=${@:dev-%=%} \
 	    train.pl_trainer.fast_dev_run=True
 
-doctest:
+tests:
 ## doctest: run doctests
-	pytest --doctest-modules src/common/model_utils.py
+	pytest --doctest-modules src/common/model_utils.py \
+	    pytest
 
 clean:
 ## clean: remove all experiments and cache files
