@@ -1,4 +1,4 @@
-name: make-tests
+name: make-pytest
 on:
   push:
     branches:
@@ -29,4 +29,4 @@ jobs:
       - name: Run tests
         run: |
           echo 'export PROJECT_ROOT="'`pwd`'"' > .env
-          make tests
+          make pytest

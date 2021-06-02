@@ -1,4 +1,4 @@
-name: make-black
+name: make-lint
 on:
   push:
     branches:
