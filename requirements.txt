@@ -1,6 +1,7 @@
 # Stuff easy to break with updates
 torch
 pytorch-lightning
+spacy
 hydra-core==1.1.0.dev5
 wandb
 streamlit
@@ -14,6 +15,7 @@ matplotlib
 stqdm
 pdoc3
 sparqlwrapper
+pytest
 
 # dev
 flake8
