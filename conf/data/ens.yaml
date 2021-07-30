@@ -3,8 +3,6 @@ datamodule:
 
   datasets:
     _target_: src.pl_data.conll_dataset.TextDataset
-    name: TrainGERData
-    path: '${oc.env:PROJECT_ROOT}data/wikipedia.csv'
+    name: InferenceData
+    path: '${oc.env:PROJECT_ROOT}/data/wikipedia.csv'
     coref_model: 'coref-spanbert'
-    model_name: ${oc.env:MODEL_NAME}
-    max_token_len: ${oc.env:MAX_TOKEN_LEN}
