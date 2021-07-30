@@ -25,7 +25,8 @@ clean:
 	    && find . -type d -iname '__pycache__' -exec rm -rf {} + \
 	    && rm -rf wandb/* \
 	    && rm -rf experiments/* \
-	    && rm -rf outputs/*
+	    && rm -rf outputs/* \
+	    && rm -rf ckpt/*
 
 docs:
 ## docs: build documentation automatically
@@ -36,7 +37,7 @@ docs:
 
 lint:
 ## lint: lint check all source files using black and flake8
-	black src --check \
+	black src --check --diff \
 	    && flake8 --ignore E501,W503 --max-complexity 7 src
 
 help:
