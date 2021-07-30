@@ -6,8 +6,6 @@ wandb
 streamlit
 transformers
 seqeval
-allennlp
-allennlp-models
 
 # Stable stuff usually backward compatible
 dvc
