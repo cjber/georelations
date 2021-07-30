@@ -38,7 +38,7 @@ docs:
 lint:
 ## lint: lint check all source files using black and flake8
 	black src --check --diff \
-	    && flake8 --ignore E501,W503 --max-complexity 7 src
+	    && flake8 --ignore E501,W503,F841,F401 --max-complexity 7 src
 
 help:
 ## help: This helpful list of commands
