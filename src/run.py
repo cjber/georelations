@@ -12,7 +12,7 @@ from pytorch_lightning.callbacks import (
     LearningRateMonitor,
     ModelCheckpoint,
 )
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import WandbLogger, CSVLogger
 
 from src.common.utils import PROJECT_ROOT, log_hyperparameters
 
@@ -48,7 +48,7 @@ def build_callbacks(cfg: DictConfig) -> List[Callback]:
                 mode=cfg.train.monitor_metric_mode,
                 save_top_k=cfg.train.model_checkpoints.save_top_k,
                 verbose=cfg.train.model_checkpoints.verbose,
-                # filename=str( (Path(cfg.train.model_checkpoints.filepath) / cfg.core.tags[0])),
+                filename=str(PROJECT_ROOT / "ckpt" / cfg.core.tags[0]),
             )
         )
 
@@ -127,6 +127,12 @@ def run(cfg: DictConfig) -> None:
             tags=cfg.core.tags,
         )
 
+    csv_logger = None
+    if "csv_log" in cfg.logging:
+        csv_logger = CSVLogger(
+            save_dir=str(Path(wandb_logger.experiment.dir) / "csv_logs")
+        )
+
     # Store the YaML config separately into the wandb dir
     yaml_conf: str = OmegaConf.to_yaml(cfg=cfg)
     (Path(wandb_logger.experiment.dir) / "hparams.yaml").write_text(yaml_conf)
@@ -136,7 +142,7 @@ def run(cfg: DictConfig) -> None:
     # The Lightning core, the Trainer
     trainer = pl.Trainer(
         default_root_dir=hydra_dir,
-        logger=wandb_logger,
+        logger=[wandb_logger, csv_logger],
         callbacks=callbacks,
         deterministic=cfg.train.deterministic,
         val_check_interval=cfg.logging.val_check_interval,
@@ -148,6 +154,8 @@ def run(cfg: DictConfig) -> None:
     hydra.utils.log.info("Starting training!")
     trainer.fit(model=model, datamodule=datamodule)
 
+    if csv_logger is not None:
+        csv_logger.save()
     # Logger closing to release resources/avoid multi-run conflicts
     if wandb_logger is not None:
         wandb_logger.experiment.finish()
