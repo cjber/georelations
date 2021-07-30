@@ -13,7 +13,7 @@ class TestDatasets:
         with initialize(config_path="../conf", job_name="test"):
             cfg = compose(config_name="ger")
             dataset: CoNLLDataset = hydra.utils.instantiate(
-                cfg.data.datamodule.datasets.train, _recursive_=False
+                "../tests/toy_data/train_ger.conll", _recursive_=False
             )
             assert type(dataset) == CoNLLDataset
 
@@ -21,7 +21,7 @@ class TestDatasets:
         with initialize(config_path="../conf", job_name="test"):
             cfg = compose(config_name="rel")
             dataset: CSVDataset = hydra.utils.instantiate(
-                cfg.data.datamodule.datasets.train, _recursive_=False
+                "../tests/toy_data/train_rel.csv", _recursive_=False
             )
             assert type(dataset) == CSVDataset
 
