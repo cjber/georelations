@@ -3,7 +3,9 @@ import itertools
 import pytorch_lightning as pl
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
+from torch.utils.data.dataloader import DataLoader
 from src.common.model_utils import (
+    Const,
     Label,
     convert_examples_to_features,
     ents_to_relations,
@@ -19,10 +21,9 @@ class RelationEnsemble(pl.LightningModule):
         self.ger_model = ger_model
         self.rel_model = rel_model
 
-        ADDITIONAL_SPECIAL_TOKENS = ["<e1>", "</e1>", "<e2>", "</e2>"]
         self.tokenizer = tokenizer.from_pretrained(self.ger_model.model_name)
         self.tokenizer.add_special_tokens(
-            {"additional_special_tokens": ADDITIONAL_SPECIAL_TOKENS}
+            {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
 
     def forward(self, input_ids, attention_mask, labels=None):
@@ -40,14 +41,21 @@ class RelationEnsemble(pl.LightningModule):
             features = [
                 convert_examples_to_features(
                     item,
-                    max_seq_len=self.ger_model.model_name,
+                    max_seq_len=Const.MAX_TOKEN_LEN,
                     tokenizer=self.tokenizer,
                     labels=False,
                 )
                 for item in sequence_list
             ]
-            rel_out = self.rel_model(**features, labels=None)
-            return (
-                sequence_list,
-                [Label("REL").labels[rel] for rel in rel_out[0].argmax(dim=1).tolist()],
-            )
+
+            breakpoint()
+            for item in features:
+                rel_out = self.rel_model(**item)
+                breakpoint()
+                return (
+                    sequence_list,
+                    [
+                        Label("REL").labels[rel]
+                        for rel in rel_out[0].argmax(dim=1).tolist()
+                    ],
+                )

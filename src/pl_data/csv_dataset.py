@@ -21,13 +21,13 @@ class CSVDataset(Dataset):
         super().__init__()
         self.name = name
         self.data: pd.DataFrame = pd.read_csv(
-            path, header=None, names=["label", "text_a"]  # type: ignore
+            path,
+            header=None,
+            names=["label", "text_a"],
         )
-        self.model_name = Const.MODEL_NAME
-        self.max_token_len = Const.MAX_TOKEN_LEN
         self.special_tokens: list[str] = Const.SPECIAL_TOKENS
 
-        self.tokenizer = tokenizer.from_pretrained(self.model_name)
+        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
         self.tokenizer.add_special_tokens(
             {"additional_special_tokens": self.special_tokens}
         )
@@ -40,7 +40,7 @@ class CSVDataset(Dataset):
 
         item.label = Label("REL").labels[item.label]
         return convert_examples_to_features(
-            item, max_seq_len=self.max_token_len, tokenizer=self.tokenizer
+            item, max_seq_len=Const.MAX_TOKEN_LEN, tokenizer=self.tokenizer
         )
 
 

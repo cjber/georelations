@@ -31,10 +31,9 @@ class RBERT(pl.LightningModule):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
         self.save_hyperparameters()
-        self.model_name = Const.MODEL_NAME
 
         self.model = AutoModel.from_pretrained(
-            self.model_name,
+            Const.MODEL_NAME,
             num_labels=Label("REL").count,
             return_dict=True,
             output_attentions=False,
