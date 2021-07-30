@@ -40,16 +40,6 @@ class Label:
         self.idx: dict[int, str] = {v: k for k, v in self.labels.items()}
         self.count: int = len(self.labels)
 
-    """
-
-    Args:
-        input_ids: Indices of input sequence tokens in the vocabulary.
-        attention_mask: Mask to avoid performing attention on padding token indices.
-            Mask values selected in ``[0, 1]``:
-            Usually  ``1`` for tokens that are NOT MASKED, ``0`` for MASKED (padded) tokens.
-        token_type_ids: Segment token indices to indicate first and second portions of the inputs.
-    """
-
 
 def encode_labels(
     tokens: list[str], labels: list[int], tokenizer, max_token_len=128
@@ -330,7 +320,7 @@ def convert_examples_to_features(
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
         "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
         "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long),
-        "labels": torch.tensor(label_id, dtype=torch.long),
+        "labels": torch.tensor(label_id, dtype=torch.long) if labels else None,
         "e1_mask": torch.tensor(e1_mask, dtype=torch.long),
         "e2_mask": torch.tensor(e2_mask, dtype=torch.long),
     }

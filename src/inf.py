@@ -31,25 +31,31 @@ def load_dataset(datadir: ValueNode, coref_model: str):
 
 
 def run(cfg: DictConfig):
-    breakpoint()
     ger_model = load_pretrained_model(GERModel, cfg.model.ger_model, "cuda")
     rel_model = load_pretrained_model(RBERT, cfg.model.rel_model, "cuda")
 
     model = RelationEnsemble(ger_model, rel_model)
     model = model.to("cuda")
 
-    dl = load_dataset(datadir=cfg.data.path, coref_model="coref-spanbert")
+    dl = load_dataset(
+        datadir=cfg.data.datamodule.datasets.path, coref_model="coref-spanbert"
+    )
     preds = [
         model(item["input_ids"].to("cuda"), item["attention_mask"].to("cuda"))
         for item in tqdm(dl)
     ]
 
+    triples = []
+    for pred in preds:
+        text = pred[0][0]
+        rel = pred[0][1]
+
+        e1 = text.split("<e1>")[1].split("</e1>")[0].strip()
+        e2 = text.split("<e2>")[1].split("</e2>")[0].strip()
+        triple = (e1, e2, rel)
+        triples.append(triple)
+
     breakpoint()
-    text = preds[0][0][5]
-    rel = preds[0][1][5]
-    e1 = text.split("<e1>")[1].split("</e1>")[0].strip()
-    e2 = text.split("<e2>")[1].split("</e2>")[0].strip()
-    triple = (e1, e2, rel)
 
 
 @hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="ens")
