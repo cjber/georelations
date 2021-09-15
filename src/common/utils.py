@@ -1,10 +1,9 @@
+import dotenv
 import os
+import pytorch_lightning as pl
+from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
 from typing import Optional
-
-import dotenv
-from omegaconf import DictConfig, OmegaConf
-import pytorch_lightning as pl
 
 
 def get_env(env_name: str, default: Optional[str] = None) -> str:

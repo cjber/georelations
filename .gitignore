@@ -2,7 +2,9 @@
 /paper
 /wandb
 /experiments
-/ckpts
+/ckpt
+/csv_logs
+/default
 /typings
 
 # .gitignore defaults for python and pycharm

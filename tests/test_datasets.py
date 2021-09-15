@@ -3,7 +3,7 @@ from hydra.experimental import compose
 from hydra.experimental.initialize import initialize
 
 from src.pl_data.conll_dataset import CoNLLDataset
-from src.pl_data.csv_dataset import CSVDataset
+from src.pl_data.csv_dataset import RelationDataset
 from src.pl_data.datamodule import DataModule
 from src.pl_modules.ger_model import GERModel
 
@@ -20,10 +20,10 @@ class TestDatasets:
     def test_csv(self):
         with initialize(config_path="../conf", job_name="test"):
             cfg = compose(config_name="rel")
-            dataset: CSVDataset = hydra.utils.instantiate(
+            dataset: RelationDataset = hydra.utils.instantiate(
                 "../tests/toy_data/train_rel.csv", _recursive_=False
             )
-            assert type(dataset) == CSVDataset
+            assert type(dataset) == RelationDataset
 
 
 class TestModules:

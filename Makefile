@@ -3,7 +3,7 @@
 PYTHON = python3
 
 env:
-	- pip install -r requirements.txt
+	- poetry install
 
 train-%:
 ## train-{model}: train full model either ger or rel

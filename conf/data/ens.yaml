@@ -1,8 +1,0 @@
-datamodule:
-  _target_: src.pl_data.datamodule.DataModule
-
-  datasets:
-    _target_: src.pl_data.conll_dataset.TextDataset
-    name: InferenceData
-    path: '${oc.env:PROJECT_ROOT}/data/wikipedia.csv'
-    coref_model: 'coref-spanbert'

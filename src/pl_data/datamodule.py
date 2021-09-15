@@ -1,78 +1,56 @@
-from typing import Optional, Sequence
-
-import hydra
-from omegaconf import DictConfig
-import omegaconf
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader, Dataset
-
-from src.common.utils import PROJECT_ROOT
+import torch
+from pathlib import Path
+from src.pl_data.csv_dataset import PandasDataset
+from torch.utils.data import DataLoader
+from torch.utils.data.dataset import random_split
+from typing import Optional
 
 
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
-        datasets: DictConfig,
-        num_workers: DictConfig,
-        batch_size: DictConfig,
+        data_dir: Path,
+        num_workers: int,
+        batch_size: int,
     ):
         super().__init__()
-        self.datasets = datasets
+        self.data_dir = data_dir
+
         self.num_workers = num_workers
         self.batch_size = batch_size
 
-        self.train_dataset: Optional[Dataset] = None
-        self.val_datasets: Optional[Sequence[Dataset]] = None
-        self.test_datasets: Optional[Sequence[Dataset]] = None
-
-    def setup(self, stage: Optional[str] = None):
-        if stage is None or stage == "fit":
-            self.train_dataset = hydra.utils.instantiate(self.datasets.train)
-            self.val_datasets = [
-                hydra.utils.instantiate(dataset_cfg)
-                for dataset_cfg in self.datasets.val
-            ]
-
-        if stage is None or stage == "test":
-            self.test_datasets = [
-                hydra.utils.instantiate(dataset_cfg)
-                for dataset_cfg in self.datasets.test
-            ]
+    def setup(self, stage: Optional[str]):
+        if stage == "fit" or stage is None:
+            csv_data = PandasDataset(self.data_dir)
+            data_len = len(csv_data)
+            val_len = data_len // 10
+            self.train_dataset, self.val_dataset = random_split(
+                csv_data,
+                [data_len - val_len, val_len],
+                generator=torch.Generator().manual_seed(42),
+            )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
             shuffle=True,
-            batch_size=self.batch_size.train,
-            num_workers=self.num_workers.train,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
         )
 
-    def val_dataloader(self) -> Sequence[DataLoader]:
-        return [
-            DataLoader(
-                dataset,
-                shuffle=False,
-                batch_size=self.batch_size.val,
-                num_workers=self.num_workers.val,
-            )
-            for dataset in self.val_datasets
-        ]
+    def val_dataloader(self) -> DataLoader:
+        return DataLoader(
+            self.val_dataset,
+            shuffle=False,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
 
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
-            f"{self.datasets=}, "
+            f"{self.data_dir=}, "
             f"{self.num_workers=}, "
             f"{self.batch_size=})"
         )
-
-
-@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="default")
-def main(cfg: omegaconf.DictConfig):
-    datamodule: DataModule = hydra.utils.instantiate(
-        cfg.data.datamodule, _recursive_=False
-    )
-
-
-if __name__ == "__main__":
-    main()

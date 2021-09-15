@@ -1,55 +1,35 @@
-from ast import literal_eval
-
-import hydra
-import omegaconf
-from omegaconf import ValueNode
 import pandas as pd
-from torch.utils.data import Dataset
-from transformers.models.auto.tokenization_auto import AutoTokenizer
-
+from pathlib import Path
 from src.common.model_utils import Const, Label, convert_examples_to_features
-from src.common.utils import PROJECT_ROOT
+from torch.utils.data import Dataset
+from transformers import AutoTokenizer
 
 
-class CSVDataset(Dataset):
+class PandasDataset(Dataset):
     def __init__(
         self,
-        name: ValueNode,
-        path: ValueNode,
+        path: Path,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
-        self.name = name
-        self.data: pd.DataFrame = pd.read_csv(
-            path,
-            header=None,
-            names=["label", "text_a"],
-        )
-        self.special_tokens: list[str] = Const.SPECIAL_TOKENS
+        self.data: pd.DataFrame = pd.read_csv(path)
 
         self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
         self.tokenizer.add_special_tokens(
-            {"additional_special_tokens": self.special_tokens}
+            {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
+
+        self.labels = self.data["relation"].unique()
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index: int):
         item = self.data.iloc[index]
-
-        item.label = Label("REL").labels[item.label]
-        return convert_examples_to_features(
+        item["relation"] = Label("REL").labels[item["relation"]]
+        input = convert_examples_to_features(
             item, max_seq_len=Const.MAX_TOKEN_LEN, tokenizer=self.tokenizer
         )
 
-
-@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="rel")
-def main(cfg: omegaconf.DictConfig):
-    dataset: CSVDataset = hydra.utils.instantiate(
-        cfg.data.datamodule.datasets.train, _recursive_=False
-    )
-
-
-if __name__ == "__main__":
-    main()
+        input["text"] = item["sentence"]
+        return input

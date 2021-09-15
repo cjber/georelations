@@ -25,6 +25,9 @@ class GERModel(pl.LightningModule):
             num_labels=Label("GER").count,
             return_dict=True,
             output_attentions=False,
+            id2label=Label("GER").idx,
+            label2id=Label("GER").labels,
+            finetuning_task="ger",
         )
 
     def forward(self, input_ids, attention_mask, labels=None, **kwargs):
@@ -87,7 +90,6 @@ class GERModel(pl.LightningModule):
         val_f1 = val_metrics.pop("overall_f1")
         self.log("val_loss", step_out["loss"])
         self.log("val_f1", val_f1, prog_bar=True)
-        self.log("val", val_metrics)
         return {
             "val_loss": step_out["loss"],
             "val_f1": val_f1,

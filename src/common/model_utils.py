@@ -1,16 +1,15 @@
-from collections import Counter
-import torch
-import string
-from typing import Union
-
 import numpy as np
 import pandas as pd
+import string
+import torch
+from collections import Counter
+from typing import Union
 
 
 class Const:
     MODEL_NAME = "roberta-base"
-    MAX_TOKEN_LEN = 128
-    SPECIAL_TOKENS = ["<e1>", "</e1>", "<e2>", "</e2>"]
+    MAX_TOKEN_LEN = 512
+    SPECIAL_TOKENS = ["<head>", "</head>", "<tail>", "</tail>"]
 
 
 class Label:
@@ -24,7 +23,7 @@ class Label:
             Name of task, either GER or REL.
         """
         self.name = name
-        assert self.name in ["GER", "REL"], "Type must be either GER or REL"
+        assert self.name in {"GER", "REL"}, "Type must be either GER or REL"
 
         if self.name == "GER":
             self.labels: dict[str, int] = {
@@ -35,7 +34,14 @@ class Label:
                 "O": 4,
             }
         elif self.name == "REL":
-            self.labels: dict[str, int] = {"NONE": 0, "NTPP": 1, "DC": 2}
+            self.labels: dict[str, int] = {
+                "capital": 0,
+                "contains": 1,
+                "administrative_divisions": 2,
+                "country": 3,
+                "neighborhood_of": 4,
+                "none": 5,
+            }
 
         self.idx: dict[int, str] = {v: k for k, v in self.labels.items()}
         self.count: int = len(self.labels)
@@ -121,9 +127,22 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     """
     Combines subwords and their tags into normal words with special chars removed.
 
-    NOTE: This currently removes all punctuation!
+    WARNING: This removed all punctuation!
 
-    Example:
+    Parameters
+    ----------
+    tokens : list[str]
+        Subword tokens.
+    tags : list[int]
+        Token tags of same length.
+
+    Returns
+    -------
+    tuple[list[str], list[str]]:
+        Combined tokens and tags.
+
+    Example
+    -------
 
     >>> tokens = ['ĠVery', 'long', 'word', 'Ġfor', 'Ġdoct', 'est', 'Ġ.']
     >>> tags = [1, -100, -100, 0, 1, -100, 0]
@@ -133,10 +152,6 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     ['Verylongword', 'for', 'doctest', '.']
     >>> len(tags) == len(tokens)
     True
-
-    :param tokens list[str]: List of subword tokens.
-    :param tags list[int]: List of tags of same length.
-    :rtype tuple[list[str], list[str]]: Combined tokens and tags
     """
     idx = [
         idx for idx, token in enumerate(tokens) if token not in ["<pad>", "<s>", "</s>"]
@@ -162,9 +177,17 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
     """
     Combines multi-token BILUO tags into single entities.
 
-    :param tokens list[str]: [TODO:description]
-    :param tags list[str]: [TODO:description]
-    :rtype tuple[list[str], list[str]]: [TODO:description]
+    Parameters
+    ----------
+    tokens : list[str]
+        Input tokenized string.
+    tags : list[str]
+        Tags corresponding with each token with BILUO format.
+
+    Returns
+    -------
+    tuple[list[str], list[str]]:
+        Tokens and tags with BILUO removed.
 
     Example:
 
@@ -177,7 +200,6 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
     >>> tags
     ['PLACE', 'O', 'O', 'O']
     """
-
     tokens_biluo = tokens.copy()
     tags_biluo = tags.copy()
 
@@ -250,15 +272,27 @@ def convert_examples_to_features(
 ):
     label_id = None
     if labels:
-        tokens_a = tokenizer.tokenize(item.text_a)
-        label_id = int(item.label)
+        tokens_a = tokenizer.tokenize(
+            item["sentence"],
+            max_length=max_seq_len,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
+        )
+        label_id = int(item["relation"])
     else:
-        tokens_a = tokenizer.tokenize(item)
+        tokens_a = tokenizer.tokenize(
+            item,
+            max_length=max_seq_len,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
+        )
 
-    e11_p = tokens_a.index("<e1>")  # the start position of entity1
-    e12_p = tokens_a.index("</e1>")  # the end position of entity1
-    e21_p = tokens_a.index("<e2>")  # the start position of entity2
-    e22_p = tokens_a.index("</e2>")  # the end position of entity2
+    e11_p = tokens_a.index("<head>")  # the start position of entity1
+    e12_p = tokens_a.index("</head>")  # the end position of entity1
+    e21_p = tokens_a.index("<tail>")  # the start position of entity2
+    e22_p = tokens_a.index("</tail>")  # the end position of entity2
 
     # Replace the token
     tokens_a[e11_p] = "$"

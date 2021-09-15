@@ -3,7 +3,6 @@ import itertools
 import hydra
 import omegaconf
 from omegaconf import ValueNode
-from spacy.training import iob_to_biluo
 import torch
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
@@ -58,18 +57,31 @@ class CoNLLDataset(Dataset):
         )
 
     def read_conll(self) -> list[dict[str, tuple[str]]]:
-        with open(self.path, "r") as conll_file:  # type: ignore
-            data: list[dict[str, tuple[str]]] = []
+        data: list[dict[str, tuple[str]]] = []
+        # with open(self.path, "r") as conll_file:  # type: ignore
+        # for divider, lines in itertools.groupby(
+        #     conll_file, lambda x: x.startswith("-DOCSTART-")
+        # ):
+        #     if divider:
+        #         continue
+        #     fields = [line.strip().split() for line in lines]
+        #     fields = [line for line in fields if line]
+        #     fields = [line for line in zip(*fields)]
+        #     tokens, _, _, tags = fields
+
+        with open(self.path, "r") as conll_file:
             for divider, lines in itertools.groupby(
-                conll_file, lambda x: x.startswith("-DOCSTART-")
+                conll_file, lambda x: x.strip() == ""
             ):
                 if divider:
                     continue
                 fields = [line.strip().split() for line in lines]
-                fields = [line for line in fields if line]
                 fields = [line for line in zip(*fields)]
-                tokens, _, _, tags = fields
-                sequence = {"tokens": tokens, "tags": iob_to_biluo(tags)}
+                tokens, ner_tags = fields
+                ner_tags = ["O" if tag[-3:] == "NOM" else tag for tag in ner_tags]
+                ner_tags = [tag[:-4] if tag != "O" else tag for tag in ner_tags]
+
+                sequence = {"tokens": tokens, "tags": ner_tags}
                 data.append(sequence)
         return data
 

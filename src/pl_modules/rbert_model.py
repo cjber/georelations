@@ -1,15 +1,12 @@
-from typing import Any, Union
-
-import hydra
-import omegaconf
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-from torch.optim import Optimizer
-from transformers import AutoModel
-
 from src.common.model_utils import Const, Label
-from src.common.utils import PROJECT_ROOT
+from torch.optim import AdamW, Optimizer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torchmetrics.functional import f1
+from transformers import AutoModel
+from typing import Any, Union
 
 
 class FCLayer(nn.Module):
@@ -30,7 +27,8 @@ class FCLayer(nn.Module):
 class RBERT(pl.LightningModule):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
-        self.save_hyperparameters()
+        self.optim = AdamW
+        self.scheduler = ReduceLROnPlateau
 
         self.model = AutoModel.from_pretrained(
             Const.MODEL_NAME,
@@ -39,8 +37,8 @@ class RBERT(pl.LightningModule):
             output_attentions=False,
         )
 
-        hidden_size = self.model.config.hidden_size  # type:ignore
-        dropout = self.model.config.hidden_dropout_prob  # type:ignore
+        hidden_size = self.model.config.hidden_size
+        dropout = self.model.config.hidden_dropout_prob
         self.cls_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
         self.entity_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
         self.label_classifier = FCLayer(
@@ -49,9 +47,6 @@ class RBERT(pl.LightningModule):
             dropout,
             use_activation=False,
         )
-
-        self.train_f1 = pl.metrics.F1(num_classes=Label("REL").count)
-        self.valid_f1 = pl.metrics.F1(num_classes=Label("REL").count)
 
     @staticmethod
     def entity_average(hidden_output, e_mask):
@@ -67,14 +62,15 @@ class RBERT(pl.LightningModule):
 
         # [b, 1, j-i+1] * [b, j-i+1, dim] = [b, 1, dim] -> [b, dim]
         sum_vector = torch.bmm(e_mask_unsqueeze.float(), hidden_output).squeeze(1)
-        avg_vector = sum_vector.float() / length_tensor.float()  # broadcasting
-        return avg_vector
+        return sum_vector.float() / length_tensor.float()
 
     def forward(
-        self, input_ids, attention_mask, token_type_ids, labels, e1_mask, e2_mask
+        self, input_ids, attention_mask, token_type_ids, labels, e1_mask, e2_mask, text
     ):
         outputs = self.model(
-            input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
         )  # sequence_output, pooled_output, (hidden_states), (attentions)
         sequence_output = outputs[0]
         pooled_output = outputs[1]  # [CLS]
@@ -120,18 +116,22 @@ class RBERT(pl.LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int) -> dict:
         step_out = self.step(batch, batch_idx)
-        train_f1 = self.train_f1(step_out["probs"], batch["labels"])
+        train_f1 = f1(
+            step_out["probs"],
+            batch["labels"],
+            num_classes=Label("REL").count,
+        )
 
         self.log("train_loss", step_out["loss"])
-        self.log("train_f1", train_f1, prog_bar=True)
+        self.log("train_f1", train_f1)
         return {"loss": step_out["loss"], "train_accuracy": train_f1}
 
     def validation_step(self, batch: Any, batch_idx: int) -> dict:
         step_out = self.step(batch, batch_idx)
-        val_f1 = self.valid_f1(step_out["probs"], batch["labels"])
+        val_f1 = f1(step_out["probs"], batch["labels"], num_classes=Label("REL").count)
 
         self.log("val_loss", step_out["loss"])
-        self.log("val_f1", val_f1)
+        self.log("val_f1", val_f1, prog_bar=True)
         return {"val_loss": step_out["loss"], "val_accuracy": val_f1}
 
     def configure_optimizers(self) -> Union[Optimizer, dict]:
@@ -152,35 +152,11 @@ class RBERT(pl.LightningModule):
             },
         ]
 
-        opt = hydra.utils.instantiate(
-            self.hparams.optim.optimizer,
-            params=optimizer_grouped_parameters,
-            _convert_="partial",
-        )
+        opt = self.optim(lr=4e-5, params=optimizer_grouped_parameters)
+        scheduler = self.scheduler(optimizer=opt, patience=2, verbose=True)
 
-        if self.hparams.optim.use_lr_scheduler:
-            scheduler = hydra.utils.instantiate(
-                self.hparams.optim.lr_scheduler, optimizer=opt
-            )
-            return {
-                "optimizer": opt,
-                "lr_scheduler": scheduler,
-                "monitor": self.hparams.optim.monitor_metric,
-            }
-
-        return opt
-
-
-@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="rel")
-def main(cfg: omegaconf.DictConfig):
-    model: pl.LightningModule = hydra.utils.instantiate(
-        cfg.model,
-        optim=cfg.optim,
-        data=cfg.data,
-        logging=cfg.logging,
-        _recursive_=False,
-    )
-
-
-if __name__ == "__main__":
-    main()
+        return {
+            "optimizer": opt,
+            "lr_scheduler": scheduler,
+            "monitor": "train_loss",
+        }
