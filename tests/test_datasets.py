@@ -1,29 +1,19 @@
-import hydra
-from hydra.experimental import compose
-from hydra.experimental.initialize import initialize
-
 from src.pl_data.conll_dataset import CoNLLDataset
-from src.pl_data.csv_dataset import RelationDataset
+from src.pl_data.csv_dataset import PandasDataset
 from src.pl_data.datamodule import DataModule
 from src.pl_modules.ger_model import GERModel
 
 
 class TestDatasets:
     def test_conll(self):
-        with initialize(config_path="../conf", job_name="test"):
-            cfg = compose(config_name="ger")
-            dataset: CoNLLDataset = hydra.utils.instantiate(
-                "../tests/toy_data/train_ger.conll", _recursive_=False
-            )
-            assert type(dataset) == CoNLLDataset
+        dataset = CoNLLDataset("../tests/toy_data/train_ger.conll")
+        assert type(dataset) == CoNLLDataset
 
     def test_csv(self):
-        with initialize(config_path="../conf", job_name="test"):
-            cfg = compose(config_name="rel")
-            dataset: RelationDataset = hydra.utils.instantiate(
+            dataset: PandasDataset = 
                 "../tests/toy_data/train_rel.csv", _recursive_=False
             )
-            assert type(dataset) == RelationDataset
+            assert type(dataset) == PandasDataset
 
 
 class TestModules:
