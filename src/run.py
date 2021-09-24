@@ -7,6 +7,7 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
 )
 from pytorch_lightning.loggers import CSVLogger
+from src.pl_data.csv_dataset import PandasDataset
 from src.pl_data.datamodule import DataModule
 from src.pl_modules.rbert_model import RBERT
 
@@ -34,28 +35,21 @@ def build_callbacks() -> list[Callback]:
     return callbacks
 
 
-def run() -> None:
-    """
-    Generic train loop
-
-    Parameters
-    ----------
-    cfg : DictConfig
-        Run configuration, defined by Hydra in /conf
-    """
+def run(dataset, pl_model: pl.LightningModule) -> None:
     seed_everything(42, workers=True)
 
     datamodule: pl.LightningDataModule = DataModule(
-        Path("data/distant_data/relations.csv"),
+        dataset=dataset,
+        path=Path("data/distant_data/relations.csv"),
         num_workers=8,
-        batch_size=4,
+        batch_size=16,
     )
-    model: pl.LightningModule = RBERT()
+    model: pl.LightningModule = pl_model()
     callbacks: list[Callback] = build_callbacks()
     csv_logger = CSVLogger(save_dir="csv_logs")
 
     # The Lightning core, the Trainer
-    trainer = pl.Trainer(
+    trainer: pl.Trainer = pl.Trainer(
         logger=[csv_logger],
         log_every_n_steps=10,
         callbacks=callbacks,
@@ -69,8 +63,8 @@ def run() -> None:
         amp_level="02",
         accumulate_grad_batches=1,
         stochastic_weight_avg=True,
-        auto_scale_batch_size="binsearch",
-        fast_dev_run=True,
+        # auto_scale_batch_size="binsearch",
+        fast_dev_run=False,
     )
 
     trainer.tune(model=model, datamodule=datamodule)
@@ -79,4 +73,4 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    run()
+    run(PandasDataset, RBERT)
