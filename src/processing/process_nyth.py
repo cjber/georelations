@@ -1,11 +1,9 @@
 # https://github.com/Spico197/NYT-H
 
-import ipdb
 import jsonlines
 import numpy as np
 import pandas as pd
-import random
-from src.common.model_utils import Const
+from src.common.utils import Const
 
 
 def process_relations(relations):
@@ -67,15 +65,6 @@ def create_df(item):
 
 if __name__ == "__main__":
     with jsonlines.open("./data/distant_data/train.json", "r") as jl:
-        relations_na = [
-            line
-            for line in jl
-            if ("location" in line["head"]["type"])
-            & ("location" in line["tail"]["type"])
-            & (line["relation"] == "NA")
-        ]
-
-    with jsonlines.open("./data/distant_data/train.json", "r") as jl:
         relations = [
             line
             for line in jl
@@ -83,14 +72,14 @@ if __name__ == "__main__":
             & ("location" in line["tail"]["type"])
             & (line["relation"].startswith("/location/") | (line["relation"] == "NA"))
         ]
-    relations.extend(relations_na)
 
     output = process_relations(relations)
+
     out = (
         pd.DataFrame([create_df(item) for item in output])
         .dropna()
-        .sample(10_000)
         .drop_duplicates()
+        .loc[lambda x: x["relation"].isin(["contains", "none"])]  # type: ignore
     )
 
     out.to_csv("./data/distant_data/relations.csv", index=False)
