@@ -9,6 +9,7 @@
 
 # .gitignore defaults for python and pycharm
 .idea
+.mount
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
