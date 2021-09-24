@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-from src.common.model_utils import Const, Label
+from src.common.utils import Const, Label
 from torch.optim import AdamW, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics.functional import f1
@@ -34,11 +34,16 @@ class RBERT(pl.LightningModule):
             Const.MODEL_NAME,
             num_labels=Label("REL").count,
             return_dict=True,
+            # output_hidden_states=True,
             output_attentions=False,
         )
 
         hidden_size = self.model.config.hidden_size
-        dropout = self.model.config.hidden_dropout_prob
+        dropout = (
+            0
+            if Const.MODEL_NAME.startswith("distil")
+            else self.model.config.hidden_dropout_prob
+        )
         self.cls_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
         self.entity_fc_layer = FCLayer(hidden_size, hidden_size, dropout)
         self.label_classifier = FCLayer(
@@ -70,10 +75,10 @@ class RBERT(pl.LightningModule):
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
+            # token_type_ids=token_type_ids,
         )  # sequence_output, pooled_output, (hidden_states), (attentions)
         sequence_output = outputs[0]
-        pooled_output = outputs[1]  # [CLS]
+        pooled_output = outputs[0][:, 0]  # [CLS]
 
         # Average
         e1_h = self.entity_average(sequence_output, e1_mask)
@@ -85,7 +90,14 @@ class RBERT(pl.LightningModule):
         e2_h = self.entity_fc_layer(e2_h)
 
         # Concat -> fc_layer
-        concat_h = torch.cat([pooled_output, e1_h, e2_h], dim=-1)
+        concat_h = torch.cat(
+            [
+                pooled_output,
+                e1_h,
+                e2_h,
+            ],
+            dim=-1,
+        )
         logits = self.label_classifier(concat_h)
 
         # add hidden states and attention if they are here
