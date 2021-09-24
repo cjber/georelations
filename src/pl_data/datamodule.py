@@ -1,7 +1,6 @@
 import pytorch_lightning as pl
 import torch
 from pathlib import Path
-from src.pl_data.csv_dataset import PandasDataset
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import random_split
 from typing import Optional
@@ -10,19 +9,21 @@ from typing import Optional
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
-        data_dir: Path,
+        dataset,
+        path: Path,
         num_workers: int,
         batch_size: int,
     ):
         super().__init__()
-        self.data_dir = data_dir
+        self.dataset = dataset
+        self.data_dir = path
 
         self.num_workers = num_workers
         self.batch_size = batch_size
 
     def setup(self, stage: Optional[str]):
         if stage == "fit" or stage is None:
-            csv_data = PandasDataset(self.data_dir)
+            csv_data = self.dataset(self.data_dir)
             data_len = len(csv_data)
             val_len = data_len // 10
             self.train_dataset, self.val_dataset = random_split(
