@@ -13,6 +13,9 @@ pytorch-lightning = "^1.4.6"
 jsonlines = "^2.0.0"
 sourcery-cli = "^0.9.4"
 torchmetrics = "^0.5.1"
+praw = "^7.4.0"
+psaw = "^0.1.0"
+data-science-types = "^0.2.23"
 
 [tool.poetry.dev-dependencies]
 isort = "^5.9.3"
@@ -25,3 +28,6 @@ ipdb = "^0.13.9"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+reportMissingTypeStubs = true
