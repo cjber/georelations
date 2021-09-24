@@ -10,6 +10,7 @@
 # .gitignore defaults for python and pycharm
 .idea
 .mount
+.envrc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
