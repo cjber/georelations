@@ -1,6 +1,9 @@
 # Geographic Relation Classification
 
-<p align="center">
+<img src="https://img.shields.io/badge/python%20-%2314354C.svg?&style=for-the-badge&logo=python&logoColor=white"/>
+<img src="https://img.shields.io/badge/PyTorch%20-%23EE4C2C.svg?&style=for-the-badge&logo=PyTorch&logoColor=white" />
+
+<!-- <p align="center">
 <a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-orange?style=for-the-badge"></a>
 <a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/-Lightning-blueviolet?style=for-the-badge"></a>
 <a href="https://hydra.cc/"><img alt="Conf: hydra" src="https://img.shields.io/badge/conf-hydra-blue?style=for-the-badge"></a>
@@ -8,27 +11,22 @@
 <a href="https://dvc.org/"><img alt="Conf: hydra" src="https://img.shields.io/badge/data-dvc-9cf?style=for-the-badge"></a>
 <a href="https://black.readthedocs.io/en/stable/"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge"></a>
 <a href="https://github.com/lucmos/nn-template?style=for-the-badge"><img alt="Template: nn-template" src="https://shields.io/badge/-nn--template-emerald?style=for-the-badge&logo=github&labelColor=gray"></a>
-</p>
+</p> -->
 
 ## Training
 
-- Build environment (inside venv)
+#### Build environment (inside venv)
 
-    > `make env`
-
-- Train Model `{ger, rel}`:
-
-    > `make train-{model}`
-
-- Dev run `{ger, rel}`:
-
-    > `make dev-{model}`
+``` commandline
+make env
+```
 
 The GER model is a BERT-based token classification model while the
 relation classification model is based on
 ![R-BERT](https://github.com/monologg/R-BERT), with alterations for
 compatibility with Pytorch Lightning.
 
+<!--
 ------------------------------------------------------------------------
 
 *temporary*
@@ -266,4 +264,4 @@ and in the Hydra `.yaml` configuration files with:
 
 ``` yaml
 ${oc.env:MY_VAR}
-```
+``` -->
