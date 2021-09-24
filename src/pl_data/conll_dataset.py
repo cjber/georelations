@@ -1,14 +1,8 @@
 import itertools
-
-import hydra
-import omegaconf
-from omegaconf import ValueNode
 import torch
+from src.common.utils import Const, Label, encode_labels
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
-
-from src.common.model_utils import Const, Label, encode_labels
-from src.common.utils import PROJECT_ROOT
 
 
 class CoNLLDataset(Dataset):
