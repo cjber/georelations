@@ -1,6 +1,11 @@
 .PHONY: docs
 
 PYTHON = python3
+PWD = $(shell pwd)
+
+docker:
+
+
 
 env:
 	- poetry install
