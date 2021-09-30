@@ -1,4 +1,5 @@
 import pytorch_lightning as pl
+from argparse import ArgumentParser
 from pathlib import Path
 from pytorch_lightning import Callback, seed_everything
 from pytorch_lightning.callbacks import (
@@ -10,6 +11,13 @@ from pytorch_lightning.loggers import CSVLogger
 from src.pl_data.csv_dataset import PandasDataset
 from src.pl_data.datamodule import DataModule
 from src.pl_modules.rbert_model import RBERT
+
+parser = ArgumentParser()
+
+parser.add_argument("--fast_dev_run", type=bool, default=False)
+parser.add_argument("--seed", nargs="+", type=int, default=[42])
+
+args = parser.parse_args()
 
 
 def build_callbacks() -> list[Callback]:
@@ -35,8 +43,9 @@ def build_callbacks() -> list[Callback]:
     return callbacks
 
 
-def run(dataset, pl_model: pl.LightningModule) -> None:
-    seed_everything(42, workers=True)
+def run(dataset, pl_model: pl.LightningModule, seed, args=args) -> None:
+
+    seed_everything(seed, workers=True)
 
     datamodule: pl.LightningDataModule = DataModule(
         dataset=dataset,
@@ -46,16 +55,22 @@ def run(dataset, pl_model: pl.LightningModule) -> None:
     )
     model: pl.LightningModule = pl_model()
     callbacks: list[Callback] = build_callbacks()
-    csv_logger = CSVLogger(save_dir="csv_logs")
+    csv_logger = CSVLogger(
+        save_dir="csv_logs",
+        name="seed_" + str(seed),
+        version=0,
+    )
 
     # The Lightning core, the Trainer
-    trainer: pl.Trainer = pl.Trainer(
+    trainer: pl.Trainer = pl.Trainer.from_argparse_args(
+        args,
+        default_root_dir="ckpts",
         logger=[csv_logger],
         log_every_n_steps=10,
         callbacks=callbacks,
         deterministic=True,
         gpus=-1,
-        precision=32,
+        precision=16,
         max_epochs=35,
         gradient_clip_val=0.5,
         auto_select_gpus=True,
@@ -63,8 +78,6 @@ def run(dataset, pl_model: pl.LightningModule) -> None:
         amp_level="02",
         accumulate_grad_batches=1,
         stochastic_weight_avg=True,
-        # auto_scale_batch_size="binsearch",
-        fast_dev_run=False,
     )
 
     trainer.tune(model=model, datamodule=datamodule)
@@ -73,4 +86,9 @@ def run(dataset, pl_model: pl.LightningModule) -> None:
 
 
 if __name__ == "__main__":
-    run(PandasDataset, RBERT)
+    if len(args.seed) > 1:
+        print("Running for multiple seeds.")
+        for seed in args.seed:
+            run(PandasDataset, RBERT, seed=seed)
+    else:
+        run(PandasDataset, RBERT, seed=args.seed[0])
