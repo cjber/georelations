@@ -1,6 +1,6 @@
 FROM docker.io/cjber/cuda as ENV
 
-RUN pacman -S python-pip --noconfirm \
+RUN pacman -Syu python-pip --noconfirm \
     && pip install poetry
 
 WORKDIR /georelations
@@ -8,6 +8,7 @@ WORKDIR /georelations
 COPY pyproject.toml pyproject.toml
 RUN poetry install
 
-COPY data src .python-version
+COPY src src
+COPY data data
 
 ENTRYPOINT ["poetry", "run", "python", "-m", "src.run"]
