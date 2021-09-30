@@ -271,7 +271,7 @@ def convert_examples_to_features(
         tokens_a = tokenizer.tokenize(
             item["sentence"],
             max_length=max_seq_len,
-            padding=True,
+            padding="max_length",
             truncation=True,
             return_tensors="pt",
         )
@@ -280,7 +280,7 @@ def convert_examples_to_features(
         tokens_a = tokenizer.tokenize(
             item,
             max_length=max_seq_len,
-            padding=True,
+            padding="max_length",
             truncation=True,
             return_tensors="pt",
         )
