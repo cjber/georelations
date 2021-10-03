@@ -258,11 +258,8 @@ def convert_examples_to_features(
     tokenizer,
     labels: bool = True,
     cls_token: str = "[CLS]",
-    cls_token_segment_id: int = 0,
     sep_token: str = "[SEP]",
     pad_token: int = 0,
-    pad_token_segment_id: int = 0,
-    sequence_a_segment_id: int = 0,
     add_sep_token: bool = False,
     mask_padding_with_zero: bool = True,
 ):
@@ -311,9 +308,7 @@ def convert_examples_to_features(
     if add_sep_token:
         tokens += [sep_token]
 
-    token_type_ids = [sequence_a_segment_id] * len(tokens)
     tokens = [cls_token] + tokens
-    token_type_ids = [cls_token_segment_id] + token_type_ids
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
     # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
@@ -325,7 +320,6 @@ def convert_examples_to_features(
     attention_mask = attention_mask + (
         [0 if mask_padding_with_zero else 1] * padding_length
     )
-    token_type_ids = token_type_ids + ([pad_token_segment_id] * padding_length)
 
     # e1 mask, e2 mask
     e1_mask = [0] * len(attention_mask)
@@ -342,14 +336,10 @@ def convert_examples_to_features(
     assert (
         len(attention_mask) == max_seq_len
     ), f"Error with attention mask length {len(attention_mask)} vs {max_seq_len}"
-    assert (
-        len(token_type_ids) == max_seq_len
-    ), f"Error with token type length {len(token_type_ids)} vs {max_seq_len}"
 
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
         "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
-        "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long),
         "labels": torch.tensor(label_id, dtype=torch.long) if labels else None,
         "e1_mask": torch.tensor(e1_mask, dtype=torch.long),
         "e2_mask": torch.tensor(e2_mask, dtype=torch.long),

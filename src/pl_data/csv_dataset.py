@@ -29,9 +29,8 @@ class PandasDataset(Dataset):
 
     def __getitem__(self, index: int):
         item = self.data.iloc[index]
-        input = convert_examples_to_features(
-            item, max_seq_len=Const.MAX_TOKEN_LEN, tokenizer=self.tokenizer
+        return convert_examples_to_features(
+            item,
+            max_seq_len=Const.MAX_TOKEN_LEN,
+            tokenizer=self.tokenizer,
         )
-
-        input["text"] = item["sentence"]
-        return input

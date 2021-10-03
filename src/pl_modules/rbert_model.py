@@ -5,7 +5,7 @@ from src.common.utils import Const, Label
 from torch.optim import AdamW, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics.functional import f1
-from transformers import AutoModel
+from transformers import AutoModel  # type: ignore
 from typing import Any, Union
 
 
@@ -25,7 +25,7 @@ class FCLayer(nn.Module):
 
 
 class RBERT(pl.LightningModule):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.optim = AdamW
         self.scheduler = ReduceLROnPlateau
@@ -34,7 +34,6 @@ class RBERT(pl.LightningModule):
             Const.MODEL_NAME,
             num_labels=Label("REL").count,
             return_dict=True,
-            # output_hidden_states=True,
             output_attentions=False,
         )
 
@@ -69,14 +68,10 @@ class RBERT(pl.LightningModule):
         sum_vector = torch.bmm(e_mask_unsqueeze.float(), hidden_output).squeeze(1)
         return sum_vector.float() / length_tensor.float()
 
-    def forward(
-        self, input_ids, attention_mask, token_type_ids, labels, e1_mask, e2_mask, text
-    ):
+    def forward(self, input_ids, attention_mask, labels, e1_mask, e2_mask):
         outputs = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            # token_type_ids=token_type_ids,
-        )  # sequence_output, pooled_output, (hidden_states), (attentions)
+            input_ids=input_ids, attention_mask=attention_mask
+        )  # sequence_output, (hidden_states), (attentions)
         sequence_output = outputs[0]
         pooled_output = outputs[0][:, 0]  # [CLS]
 
@@ -167,8 +162,4 @@ class RBERT(pl.LightningModule):
         opt = self.optim(lr=4e-5, params=optimizer_grouped_parameters)
         scheduler = self.scheduler(optimizer=opt, patience=2, verbose=True)
 
-        return {
-            "optimizer": opt,
-            "lr_scheduler": scheduler,
-            "monitor": "train_loss",
-        }
+        return {"optimizer": opt, "lr_scheduler": scheduler, "monitor": "train_loss"}
