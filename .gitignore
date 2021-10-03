@@ -2,7 +2,7 @@
 /paper
 /wandb
 /experiments
-/ckpt
+/ckpts
 /csv_logs
 /default
 /typings
