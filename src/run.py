@@ -34,6 +34,7 @@ def build_callbacks() -> list[Callback]:
             patience=3,
         ),
         ModelCheckpoint(
+            filename="checkpoint",
             monitor="val_loss",
             mode="min",
             save_top_k=1,
@@ -61,22 +62,18 @@ def run(dataset, pl_model: pl.LightningModule, seed, args=args) -> None:
         version=0,
     )
 
-    # The Lightning core, the Trainer
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         args,
+        deterministic=True,  # ensure reproducible results
         default_root_dir="ckpts",
         logger=[csv_logger],
         log_every_n_steps=10,
         callbacks=callbacks,
-        deterministic=True,
         gpus=-1,
         precision=16,
         max_epochs=35,
-        gradient_clip_val=0.5,
         auto_select_gpus=True,
         benchmark=True,
-        amp_level="02",
-        accumulate_grad_batches=1,
         stochastic_weight_avg=True,
     )
 
