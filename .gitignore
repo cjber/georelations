@@ -11,6 +11,7 @@
 .idea
 .mount
 .envrc
+.direnv
 commands.md
 
 # Byte-compiled / optimized / DLL files
