@@ -1,40 +1,13 @@
-from src.pl_data.conll_dataset import CoNLLDataset
+from pathlib import Path
 from src.pl_data.csv_dataset import RELDataset
-from src.pl_data.datamodule import DataModule
-from src.pl_modules.ger_model import GERModel
+from src.pl_data.wnut_dataset import WNUTDataset
 
 
 class TestDatasets:
-    def test_conll(self):
-        dataset = CoNLLDataset("../tests/toy_data/train_ger.conll")
-        assert type(dataset) == CoNLLDataset
+    def test_wnut(self):
+        dataset: WNUTDataset = WNUTDataset("test")
+        assert type(dataset) == WNUTDataset
 
     def test_csv(self):
-            dataset: RELDataset = 
-                "../tests/toy_data/train_rel.csv", _recursive_=False
-            )
-            assert type(dataset) == RELDataset
-
-
-class TestModules:
-    def test_datamodule(self):
-        with initialize(config_path="../conf", job_name="test"):
-            cfg = compose(config_name="ger")
-            datamodule: DataModule = hydra.utils.instantiate(
-                cfg.data.datamodule, _recursive_=False
-            )
-            assert type(datamodule) == DataModule
-
-
-class TestModels:
-    def test_ger(self):
-        with initialize(config_path="../conf", job_name="test"):
-            cfg = compose(config_name="ger")
-            model: GERModel = hydra.utils.instantiate(
-                cfg.model,
-                optim=cfg.optim,
-                data=cfg.data,
-                logging=cfg.logging,
-                _recursive_=False,
-            )
-            assert type(model) == GERModel
+        dataset: RELDataset = RELDataset(Path("tests/toy_data/train_rel.csv"))
+        assert type(dataset) == RELDataset
