@@ -1,32 +1,49 @@
-import hydra
-import omegaconf
-from omegaconf import ValueNode
-import pandas as pd
+import jsonlines
+import torch
+from ekphrasis.classes.preprocessor import TextPreProcessor
+from ekphrasis.classes.tokenizer import SocialTokenizer
+from ekphrasis.dicts.emoticons import emoticons
+from pathlib import Path
+from src.common.utils import Const
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers.tokenization_utils import PreTrainedTokenizer
 
-from src.common.model_utils import Const
-from src.common.utils import PROJECT_ROOT
+text_processor = TextPreProcessor(
+    normalize=Const.NORMALIZE,
+    annotate={"hashtag"},
+    fix_html=True,
+    segmenter="twitter",
+    corrector="twitter",
+    unpack_hashtags=True,
+    unpack_contractions=True,
+    spell_correct_elong=False,
+    tokenizer=SocialTokenizer(lowercase=False).tokenize,
+    dicts=[emoticons],
+)
 
 
-class TextDataset(Dataset):
+class JSONLDataset(Dataset):
     def __init__(
-        self,
-        path: ValueNode,
-        coref_model: str,
-        tokenizer=AutoTokenizer,
-    ):
-        self.data: pd.DataFrame = pd.read_csv(path)["text"]
+        self, path: Path, tokenizer: PreTrainedTokenizer = AutoTokenizer  # type: ignore
+    ) -> None:
+        with jsonlines.open(path, "r") as jl:
+            self.data = [line["text"] for line in jl]
+        self.data = [self.normalise(line) for line in self.data]
 
         self.tokenizer = tokenizer.from_pretrained(
-            Const.MODEL_NAME, add_prefix_space=True
+            Const.MODEL_NAME,
+            add_prefix_space=True,
+        )
+        self.tokenizer.add_special_tokens(
+            {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, index: int):
-        text: str = self.data.iloc[index]
+    def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
+        text: str = self.data[index]
         encoding = self.tokenizer(
             text,
             return_attention_mask=True,
@@ -40,13 +57,6 @@ class TextDataset(Dataset):
             attention_mask=encoding["attention_mask"].flatten(),
         )
 
-
-@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="default")
-def main(cfg: omegaconf.DictConfig):
-    dataset: TextDataset = hydra.utils.instantiate(
-        cfg.data.datamodule.datasets, _recursive_=False
-    )
-
-
-if __name__ == "__main__":
-    main()
+    @staticmethod
+    def normalise(line: str) -> str:
+        return " ".join(text_processor.pre_process_doc(line))

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
-<title>src.pl_metric.metric API documentation</title>
+<meta name="generator" content="pdoc 0.10.0" />
+<title>pl_metric.metric API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>src.pl_metric.metric</code></h1>
+<h1 class="title">Module <code>pl_metric.metric</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -27,11 +27,10 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import pandas as pd
-from pytorch_lightning.metrics import Metric
 from seqeval.metrics import accuracy_score, classification_report
-from seqeval.scheme import BILOU
-
-from src.common.model_utils import Label
+from seqeval.scheme import BILOU, IOB2
+from src.common.utils import Label
+from torchmetrics import Metric
 
 
 class Seqeval(Metric):
@@ -65,16 +64,16 @@ class Seqeval(Metric):
                 [Label(&#34;GER&#34;).idx[pred] for pred in pred_seq[true_labels_idx]]
             )
             target_bioul.append(
-                [Label(&#34;GER&#34;).idx[lab] for lab in target_seq[true_labels_idx]]
+                [Label(&#34;GER&#34;).idx[target] for target in target_seq[true_labels_idx]]
             )
 
         report: dict = classification_report(
             y_true=target_bioul,
             y_pred=pred_bioul,
-            mode=&#34;strict&#34;,
-            scheme=BILOU,
+            # mode=&#34;strict&#34;,
+            scheme=IOB2,
             output_dict=True,
-            zero_division=1,  # no positive labels gives f1 of 1
+            zero_division=1,  # no positive labels gives f1 of 0
         )  # type: ignore
 
         report.pop(&#34;macro avg&#34;)
@@ -100,15 +99,35 @@ class Seqeval(Metric):
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="src.pl_metric.metric.Seqeval"><code class="flex name class">
+<dt id="pl_metric.metric.Seqeval"><code class="flex name class">
 <span>class <span class="ident">Seqeval</span></span>
 </code></dt>
 <dd>
-<div class="desc"><p>This implementation refers to :class:<code>~torchmetrics.Metric</code>.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning:&ensp;This metric is deprecated, use <code>torchmetrics.Metric</code>. Will be removed in v1.5.0.</p>
-</div>
-<p>Initializes internal Module state, shared by both nn.Module and ScriptModule.</p></div>
+<div class="desc"><p>Base class for all metrics present in the Metrics API.</p>
+<p>Implements <code>add_state()</code>, <code>forward()</code>, <code>reset()</code> and a few other things to
+handle distributed synchronization and per-step metric computation.</p>
+<p>Override <code>update()</code> and <code>compute()</code> functions to implement your own metric. Use
+<code>add_state()</code> to register metric state variables which keep track of state on each
+call of <code>update()</code> and are synchronized across processes when <code>compute()</code> is called.</p>
+<h2 id="note">Note</h2>
+<p>Metric state variables can either be <code>torch.Tensors</code> or an empty list which can we used
+to store `torch.Tensors``.</p>
+<h2 id="note_1">Note</h2>
+<p>Different metrics only override <code>update()</code> and not <code>forward()</code>. A call to <code>update()</code>
+is valid, but it won't return the metric value at the current step. A call to <code>forward()</code>
+automatically calls <code>update()</code> and also returns the metric value at the current step.</p>
+<h2 id="args">Args</h2>
+<p>compute_on_step:
+Forward only calls <code>update()</code> and returns None if this is set to False. default: True
+dist_sync_on_step:
+Synchronize metric state across processes at each <code>forward()</code>
+before returning the value at the step.
+process_group:
+Specify the process group on which synchronization is called. default: None (which selects the entire world)
+dist_sync_fn:
+Callback that performs the allgather operation on the metric state. When <code>None</code>, DDP
+will be used to perform the allgather.
+Initializes internal Module state, shared by both nn.Module and ScriptModule.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -144,16 +163,16 @@ class Seqeval(Metric):
                 [Label(&#34;GER&#34;).idx[pred] for pred in pred_seq[true_labels_idx]]
             )
             target_bioul.append(
-                [Label(&#34;GER&#34;).idx[lab] for lab in target_seq[true_labels_idx]]
+                [Label(&#34;GER&#34;).idx[target] for target in target_seq[true_labels_idx]]
             )
 
         report: dict = classification_report(
             y_true=target_bioul,
             y_pred=pred_bioul,
-            mode=&#34;strict&#34;,
-            scheme=BILOU,
+            # mode=&#34;strict&#34;,
+            scheme=IOB2,
             output_dict=True,
-            zero_division=1,  # no positive labels gives f1 of 1
+            zero_division=1,  # no positive labels gives f1 of 0
         )  # type: ignore
 
         report.pop(&#34;macro avg&#34;)
@@ -171,30 +190,29 @@ class Seqeval(Metric):
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li>pytorch_lightning.metrics.metric.Metric</li>
 <li>torchmetrics.metric.Metric</li>
 <li>torch.nn.modules.module.Module</li>
 <li>abc.ABC</li>
 </ul>
 <h3>Class variables</h3>
 <dl>
-<dt id="src.pl_metric.metric.Seqeval.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
+<dt id="pl_metric.metric.Seqeval.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="src.pl_metric.metric.Seqeval.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
+<dt id="pl_metric.metric.Seqeval.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="src.pl_metric.metric.Seqeval.compute"><code class="name flex">
+<dt id="pl_metric.metric.Seqeval.compute"><code class="name flex">
 <span>def <span class="ident">compute</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Override this method to compute the final metric value from state variables
-synchronized across the distributed backend.</p></div>
+<div class="desc"><p>Override this method to compute the final metric value from state variables synchronized across the
+distributed backend.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -216,16 +234,16 @@ synchronized across the distributed backend.</p></div>
             [Label(&#34;GER&#34;).idx[pred] for pred in pred_seq[true_labels_idx]]
         )
         target_bioul.append(
-            [Label(&#34;GER&#34;).idx[lab] for lab in target_seq[true_labels_idx]]
+            [Label(&#34;GER&#34;).idx[target] for target in target_seq[true_labels_idx]]
         )
 
     report: dict = classification_report(
         y_true=target_bioul,
         y_pred=pred_bioul,
-        mode=&#34;strict&#34;,
-        scheme=BILOU,
+        # mode=&#34;strict&#34;,
+        scheme=IOB2,
         output_dict=True,
-        zero_division=1,  # no positive labels gives f1 of 1
+        zero_division=1,  # no positive labels gives f1 of 0
     )  # type: ignore
 
     report.pop(&#34;macro avg&#34;)
@@ -242,30 +260,39 @@ synchronized across the distributed backend.</p></div>
     return pd.json_normalize(report, sep=&#34;_&#34;).to_dict(orient=&#34;records&#34;)[0]</code></pre>
 </details>
 </dd>
-<dt id="src.pl_metric.metric.Seqeval.forward"><code class="name flex">
-<span>def <span class="ident">forward</span></span>(<span>self, *args, **kwargs) ‑> Callable[..., Any]</span>
+<dt id="pl_metric.metric.Seqeval.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, *args: Any, **kwargs: Any) ‑> Any</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Automatically calls <code>update()</code>. Returns the metric value over inputs if <code>compute_on_step</code> is True.</p></div>
+<div class="desc"><p>Automatically calls <code>update()</code>.</p>
+<p>Returns the metric value over inputs if <code>compute_on_step</code> is True.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@torch.jit.unused
-def forward(self, *args, **kwargs):
-    &#34;&#34;&#34;
-    Automatically calls ``update()``. Returns the metric value over inputs if ``compute_on_step`` is True.
+def forward(self, *args: Any, **kwargs: Any) -&gt; Any:
+    &#34;&#34;&#34;Automatically calls ``update()``.
+
+    Returns the metric value over inputs if ``compute_on_step`` is True.
     &#34;&#34;&#34;
     # add current step
+    if self._is_synced:
+        raise TorchMetricsUserError(
+            &#34;The Metric shouldn&#39;t be synced when performing ``update``. &#34;
+            &#34;HINT: Did you forget to call ``unsync`` ?.&#34;
+        )
+
     with torch.no_grad():
         self.update(*args, **kwargs)
-    self._forward_cache = None
 
     if self.compute_on_step:
         self._to_sync = self.dist_sync_on_step
+        # skip restore cache operation from compute as cache is stored below.
+        self._should_unsync = False
 
         # save context before switch
-        cache = {attr: getattr(self, attr) for attr in self._defaults.keys()}
+        cache = {attr: getattr(self, attr) for attr in self._defaults}
 
         # call reset, update, compute, on single batch
         self.reset()
@@ -275,13 +302,16 @@ def forward(self, *args, **kwargs):
         # restore context
         for attr, val in cache.items():
             setattr(self, attr, val)
+        self._is_synced = False
+
+        self._should_unsync = True
         self._to_sync = True
         self._computed = None
 
         return self._forward_cache</code></pre>
 </details>
 </dd>
-<dt id="src.pl_metric.metric.Seqeval.update"><code class="name flex">
+<dt id="pl_metric.metric.Seqeval.update"><code class="name flex">
 <span>def <span class="ident">update</span></span>(<span>self, preds, targets)</span>
 </code></dt>
 <dd>
@@ -308,19 +338,19 @@ def forward(self, *args, **kwargs):
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="src.pl_metric" href="index.html">src.pl_metric</a></code></li>
+<li><code><a title="pl_metric" href="index.html">pl_metric</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="src.pl_metric.metric.Seqeval" href="#src.pl_metric.metric.Seqeval">Seqeval</a></code></h4>
+<h4><code><a title="pl_metric.metric.Seqeval" href="#pl_metric.metric.Seqeval">Seqeval</a></code></h4>
 <ul class="">
-<li><code><a title="src.pl_metric.metric.Seqeval.compute" href="#src.pl_metric.metric.Seqeval.compute">compute</a></code></li>
-<li><code><a title="src.pl_metric.metric.Seqeval.dump_patches" href="#src.pl_metric.metric.Seqeval.dump_patches">dump_patches</a></code></li>
-<li><code><a title="src.pl_metric.metric.Seqeval.forward" href="#src.pl_metric.metric.Seqeval.forward">forward</a></code></li>
-<li><code><a title="src.pl_metric.metric.Seqeval.training" href="#src.pl_metric.metric.Seqeval.training">training</a></code></li>
-<li><code><a title="src.pl_metric.metric.Seqeval.update" href="#src.pl_metric.metric.Seqeval.update">update</a></code></li>
+<li><code><a title="pl_metric.metric.Seqeval.compute" href="#pl_metric.metric.Seqeval.compute">compute</a></code></li>
+<li><code><a title="pl_metric.metric.Seqeval.dump_patches" href="#pl_metric.metric.Seqeval.dump_patches">dump_patches</a></code></li>
+<li><code><a title="pl_metric.metric.Seqeval.forward" href="#pl_metric.metric.Seqeval.forward">forward</a></code></li>
+<li><code><a title="pl_metric.metric.Seqeval.training" href="#pl_metric.metric.Seqeval.training">training</a></code></li>
+<li><code><a title="pl_metric.metric.Seqeval.update" href="#pl_metric.metric.Seqeval.update">update</a></code></li>
 </ul>
 </li>
 </ul>
@@ -329,7 +359,7 @@ def forward(self, *args, **kwargs):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

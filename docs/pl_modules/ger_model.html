@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
-<title>src.pl_modules.ger_model API documentation</title>
+<meta name="generator" content="pdoc 0.10.0" />
+<title>pl_modules.ger_model API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,43 +19,44 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>src.pl_modules.ger_model</code></h1>
+<h1 class="title">Module <code>pl_modules.ger_model</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from typing import Any, Union
-
-import hydra
-import omegaconf
-import pytorch_lightning as pl
-from torch.optim import Optimizer
-from transformers import AutoModelForTokenClassification, AutoTokenizer
-
-from src.common.model_utils import Label, combine_biluo, combine_subwords
-from src.common.utils import PROJECT_ROOT
+<pre><code class="python">import pytorch_lightning as pl
+from src.common.utils import Const, Label, combine_biluo, combine_subwords
 from src.pl_metric.metric import Seqeval
+from torch.optim import AdamW, Optimizer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from transformers import AutoModelForTokenClassification, AutoTokenizer  # type: ignore
+from typing import Any, Union
 
 
 class GERModel(pl.LightningModule):
-    def __init__(self, model_name, *args, **kwargs) -&gt; None:
+    def __init__(self) -&gt; None:
         super().__init__()
-        self.save_hyperparameters()
-        self.model_name = model_name
+        self.optim = AdamW
+        self.scheduler = ReduceLROnPlateau
+        self.model_name = Const.MODEL_NAME
 
         self.train_metric = Seqeval()
         self.val_metric = Seqeval()
+        self.test_metric = Seqeval()
 
         self.model = AutoModelForTokenClassification.from_pretrained(
             self.model_name,
             num_labels=Label(&#34;GER&#34;).count,
             return_dict=True,
             output_attentions=False,
+            id2label=Label(&#34;GER&#34;).idx,
+            label2id=Label(&#34;GER&#34;).labels,
+            finetuning_task=&#34;ger&#34;,
         )
 
-    def forward(self, input_ids, attention_mask, labels=None, **kwargs):
+    def forward(self, input_ids, attention_mask, labels=None):
         &#34;&#34;&#34;
         Method for the forward pass.
         &#39;training_step&#39;, &#39;validation_step&#39; and &#39;test_step&#39; should call
@@ -73,9 +74,7 @@ class GERModel(pl.LightningModule):
             )
             batch_out = []
             for id_batch, logit_batch in zip(input_ids, outputs[&#34;logits&#34;]):
-                tokens: list = tokenizer.convert_ids_to_tokens(  # type:ignore
-                    id_batch.tolist()
-                )
+                tokens: list = tokenizer.convert_ids_to_tokens(id_batch.tolist())
                 tags: list = logit_batch.argmax(dim=1).tolist()
                 tokens, tags = combine_subwords(tokens, tags)
                 tokens, tags = combine_biluo(tokens, tags)
@@ -83,7 +82,7 @@ class GERModel(pl.LightningModule):
             return batch_out
         return outputs
 
-    def step(self, batch: Any, batch_idx: int) -&gt; dict:
+    def step(self, batch: Any, _: int) -&gt; dict:
         outputs = self(
             input_ids=batch[&#34;input_ids&#34;],
             attention_mask=batch[&#34;attention_mask&#34;],
@@ -96,49 +95,45 @@ class GERModel(pl.LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int) -&gt; dict:
         step_out = self.step(batch, batch_idx)
-        train_metrics = self.train_metric(
-            preds=step_out[&#34;preds&#34;], targets=batch[&#34;labels&#34;]
+        loss = step_out[&#34;loss&#34;]
+        train_f1 = self.train_metric(
+            preds=step_out[&#34;preds&#34;],
+            targets=batch[&#34;labels&#34;],
+        ).pop(&#34;overall_f1&#34;)
+        self.log_dict(
+            {&#34;train_loss&#34;: loss, &#34;train_f1&#34;: train_f1},
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
         )
-        train_f1 = train_metrics.pop(&#34;overall_f1&#34;)
-
-        self.log(&#34;train_loss&#34;, step_out[&#34;loss&#34;])
-        self.log(&#34;train_f1&#34;, train_f1, prog_bar=True)
-        return {
-            &#34;loss&#34;: step_out[&#34;loss&#34;],
-            &#34;train_f1&#34;: train_f1,
-            &#34;train_metrics&#34;: train_metrics,
-        }
+        return loss
 
     def validation_step(self, batch: Any, batch_idx: int) -&gt; dict:
         step_out = self.step(batch, batch_idx)
-        val_metrics = self.val_metric(preds=step_out[&#34;preds&#34;], targets=batch[&#34;labels&#34;])
-        val_f1 = val_metrics.pop(&#34;overall_f1&#34;)
-        self.log(&#34;val_loss&#34;, step_out[&#34;loss&#34;])
-        self.log(&#34;val_f1&#34;, val_f1, prog_bar=True)
-        self.log(&#34;val&#34;, val_metrics)
-        return {
-            &#34;val_loss&#34;: step_out[&#34;loss&#34;],
-            &#34;val_f1&#34;: val_f1,
-            &#34;val_metrics&#34;: val_metrics,
-        }
+        loss = step_out[&#34;loss&#34;]
+        val_f1 = self.val_metric(
+            preds=step_out[&#34;preds&#34;],
+            targets=batch[&#34;labels&#34;],
+        ).pop(&#34;overall_f1&#34;)
+        self.log_dict(
+            {&#34;val_loss&#34;: loss, &#34;val_f1&#34;: val_f1},
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+        )
+        return loss
 
-    def configure_optimizers(
-        self,
-    ) -&gt; Union[Optimizer, dict]:
-        &#34;&#34;&#34;
-        Choose what optimizers and learning-rate schedulers to use in your optimization.
-        Normally you&#39;d need one.
-        Return:
-            Any of these 6 options.
-            - Single optimizer.
-            - List or Tuple - List of optimizers.
-            - Two lists - The first list has multiple optimizers, the second a list of
-                          LR schedulers (or lr_dict).
-            - Dictionary, with an &#39;optimizer&#39; key, and (optionally) a &#39;lr_scheduler&#39;
-              key whose value is a single LR scheduler or lr_dict.
-            - Tuple of dictionaries as described, with an optional &#39;frequency&#39; key.
-            - None - Fit will run without any optimizer.
-        &#34;&#34;&#34;
+    def test_step(self, batch: Any, batch_idx: int) -&gt; dict:
+        step_out = self.step(batch, batch_idx)
+        loss = step_out[&#34;loss&#34;]
+        test_f1 = self.test_metric(
+            step_out[&#34;preds&#34;],
+            batch[&#34;labels&#34;],
+        ).pop(&#34;overall_f1&#34;)
+        self.log_dict({&#34;test_loss&#34;: loss, &#34;test_f1&#34;: test_f1})
+        return loss
+
+    def configure_optimizers(self) -&gt; Union[Optimizer, dict]:
         param_optimizer = list(self.model.named_parameters())
         no_decay = [&#34;bias&#34;, &#34;gamma&#34;, &#34;beta&#34;]
         optimizer_grouped_parameters = [
@@ -155,38 +150,11 @@ class GERModel(pl.LightningModule):
                 &#34;weight_decay_rate&#34;: 0.0,
             },
         ]
-        opt = hydra.utils.instantiate(
-            self.hparams.optim.optimizer,
-            params=optimizer_grouped_parameters,
-            _convert_=&#34;partial&#34;,
-        )
 
-        if self.hparams.optim.use_lr_scheduler:
-            scheduler = hydra.utils.instantiate(
-                self.hparams.optim.lr_scheduler, optimizer=opt
-            )
-            return {
-                &#34;optimizer&#34;: opt,
-                &#34;lr_scheduler&#34;: scheduler,
-                &#34;monitor&#34;: self.hparams.optim.monitor_metric,
-            }
+        opt = self.optim(lr=4e-5, params=optimizer_grouped_parameters)
+        scheduler = self.scheduler(optimizer=opt, patience=2, verbose=True)
 
-        return opt
-
-
-@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;ger&#34;)
-def main(cfg: omegaconf.DictConfig):
-    model: pl.LightningModule = hydra.utils.instantiate(
-        cfg.model,
-        optim=cfg.optim,
-        data=cfg.data,
-        logging=cfg.logging,
-        _recursive_=False,
-    )
-
-
-if __name__ == &#34;__main__&#34;:
-    main()</code></pre>
+        return {&#34;optimizer&#34;: opt, &#34;lr_scheduler&#34;: scheduler, &#34;monitor&#34;: &#34;train_loss&#34;}</code></pre>
 </details>
 </section>
 <section>
@@ -194,36 +162,12 @@ if __name__ == &#34;__main__&#34;:
 <section>
 </section>
 <section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="src.pl_modules.ger_model.main"><code class="name flex">
-<span>def <span class="ident">main</span></span>(<span>cfg: omegaconf.dictconfig.DictConfig)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;ger&#34;)
-def main(cfg: omegaconf.DictConfig):
-    model: pl.LightningModule = hydra.utils.instantiate(
-        cfg.model,
-        optim=cfg.optim,
-        data=cfg.data,
-        logging=cfg.logging,
-        _recursive_=False,
-    )</code></pre>
-</details>
-</dd>
-</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="src.pl_modules.ger_model.GERModel"><code class="flex name class">
+<dt id="pl_modules.ger_model.GERModel"><code class="flex name class">
 <span>class <span class="ident">GERModel</span></span>
-<span>(</span><span>model_name, *args, **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Helper class that provides a standard way to create an ABC using
@@ -233,22 +177,27 @@ inheritance.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GERModel(pl.LightningModule):
-    def __init__(self, model_name, *args, **kwargs) -&gt; None:
+    def __init__(self) -&gt; None:
         super().__init__()
-        self.save_hyperparameters()
-        self.model_name = model_name
+        self.optim = AdamW
+        self.scheduler = ReduceLROnPlateau
+        self.model_name = Const.MODEL_NAME
 
         self.train_metric = Seqeval()
         self.val_metric = Seqeval()
+        self.test_metric = Seqeval()
 
         self.model = AutoModelForTokenClassification.from_pretrained(
             self.model_name,
             num_labels=Label(&#34;GER&#34;).count,
             return_dict=True,
             output_attentions=False,
+            id2label=Label(&#34;GER&#34;).idx,
+            label2id=Label(&#34;GER&#34;).labels,
+            finetuning_task=&#34;ger&#34;,
         )
 
-    def forward(self, input_ids, attention_mask, labels=None, **kwargs):
+    def forward(self, input_ids, attention_mask, labels=None):
         &#34;&#34;&#34;
         Method for the forward pass.
         &#39;training_step&#39;, &#39;validation_step&#39; and &#39;test_step&#39; should call
@@ -266,9 +215,7 @@ inheritance.</p></div>
             )
             batch_out = []
             for id_batch, logit_batch in zip(input_ids, outputs[&#34;logits&#34;]):
-                tokens: list = tokenizer.convert_ids_to_tokens(  # type:ignore
-                    id_batch.tolist()
-                )
+                tokens: list = tokenizer.convert_ids_to_tokens(id_batch.tolist())
                 tags: list = logit_batch.argmax(dim=1).tolist()
                 tokens, tags = combine_subwords(tokens, tags)
                 tokens, tags = combine_biluo(tokens, tags)
@@ -276,7 +223,7 @@ inheritance.</p></div>
             return batch_out
         return outputs
 
-    def step(self, batch: Any, batch_idx: int) -&gt; dict:
+    def step(self, batch: Any, _: int) -&gt; dict:
         outputs = self(
             input_ids=batch[&#34;input_ids&#34;],
             attention_mask=batch[&#34;attention_mask&#34;],
@@ -289,49 +236,45 @@ inheritance.</p></div>
 
     def training_step(self, batch: Any, batch_idx: int) -&gt; dict:
         step_out = self.step(batch, batch_idx)
-        train_metrics = self.train_metric(
-            preds=step_out[&#34;preds&#34;], targets=batch[&#34;labels&#34;]
+        loss = step_out[&#34;loss&#34;]
+        train_f1 = self.train_metric(
+            preds=step_out[&#34;preds&#34;],
+            targets=batch[&#34;labels&#34;],
+        ).pop(&#34;overall_f1&#34;)
+        self.log_dict(
+            {&#34;train_loss&#34;: loss, &#34;train_f1&#34;: train_f1},
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
         )
-        train_f1 = train_metrics.pop(&#34;overall_f1&#34;)
-
-        self.log(&#34;train_loss&#34;, step_out[&#34;loss&#34;])
-        self.log(&#34;train_f1&#34;, train_f1, prog_bar=True)
-        return {
-            &#34;loss&#34;: step_out[&#34;loss&#34;],
-            &#34;train_f1&#34;: train_f1,
-            &#34;train_metrics&#34;: train_metrics,
-        }
+        return loss
 
     def validation_step(self, batch: Any, batch_idx: int) -&gt; dict:
         step_out = self.step(batch, batch_idx)
-        val_metrics = self.val_metric(preds=step_out[&#34;preds&#34;], targets=batch[&#34;labels&#34;])
-        val_f1 = val_metrics.pop(&#34;overall_f1&#34;)
-        self.log(&#34;val_loss&#34;, step_out[&#34;loss&#34;])
-        self.log(&#34;val_f1&#34;, val_f1, prog_bar=True)
-        self.log(&#34;val&#34;, val_metrics)
-        return {
-            &#34;val_loss&#34;: step_out[&#34;loss&#34;],
-            &#34;val_f1&#34;: val_f1,
-            &#34;val_metrics&#34;: val_metrics,
-        }
+        loss = step_out[&#34;loss&#34;]
+        val_f1 = self.val_metric(
+            preds=step_out[&#34;preds&#34;],
+            targets=batch[&#34;labels&#34;],
+        ).pop(&#34;overall_f1&#34;)
+        self.log_dict(
+            {&#34;val_loss&#34;: loss, &#34;val_f1&#34;: val_f1},
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+        )
+        return loss
 
-    def configure_optimizers(
-        self,
-    ) -&gt; Union[Optimizer, dict]:
-        &#34;&#34;&#34;
-        Choose what optimizers and learning-rate schedulers to use in your optimization.
-        Normally you&#39;d need one.
-        Return:
-            Any of these 6 options.
-            - Single optimizer.
-            - List or Tuple - List of optimizers.
-            - Two lists - The first list has multiple optimizers, the second a list of
-                          LR schedulers (or lr_dict).
-            - Dictionary, with an &#39;optimizer&#39; key, and (optionally) a &#39;lr_scheduler&#39;
-              key whose value is a single LR scheduler or lr_dict.
-            - Tuple of dictionaries as described, with an optional &#39;frequency&#39; key.
-            - None - Fit will run without any optimizer.
-        &#34;&#34;&#34;
+    def test_step(self, batch: Any, batch_idx: int) -&gt; dict:
+        step_out = self.step(batch, batch_idx)
+        loss = step_out[&#34;loss&#34;]
+        test_f1 = self.test_metric(
+            step_out[&#34;preds&#34;],
+            batch[&#34;labels&#34;],
+        ).pop(&#34;overall_f1&#34;)
+        self.log_dict({&#34;test_loss&#34;: loss, &#34;test_f1&#34;: test_f1})
+        return loss
+
+    def configure_optimizers(self) -&gt; Union[Optimizer, dict]:
         param_optimizer = list(self.model.named_parameters())
         no_decay = [&#34;bias&#34;, &#34;gamma&#34;, &#34;beta&#34;]
         optimizer_grouped_parameters = [
@@ -348,29 +291,18 @@ inheritance.</p></div>
                 &#34;weight_decay_rate&#34;: 0.0,
             },
         ]
-        opt = hydra.utils.instantiate(
-            self.hparams.optim.optimizer,
-            params=optimizer_grouped_parameters,
-            _convert_=&#34;partial&#34;,
-        )
 
-        if self.hparams.optim.use_lr_scheduler:
-            scheduler = hydra.utils.instantiate(
-                self.hparams.optim.lr_scheduler, optimizer=opt
-            )
-            return {
-                &#34;optimizer&#34;: opt,
-                &#34;lr_scheduler&#34;: scheduler,
-                &#34;monitor&#34;: self.hparams.optim.monitor_metric,
-            }
+        opt = self.optim(lr=4e-5, params=optimizer_grouped_parameters)
+        scheduler = self.scheduler(optimizer=opt, patience=2, verbose=True)
 
-        return opt</code></pre>
+        return {&#34;optimizer&#34;: opt, &#34;lr_scheduler&#34;: scheduler, &#34;monitor&#34;: &#34;train_loss&#34;}</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li>pytorch_lightning.core.lightning.LightningModule</li>
 <li>abc.ABC</li>
-<li>pytorch_lightning.utilities.device_dtype_mixin.DeviceDtypeModuleMixin</li>
+<li>pytorch_lightning.core.mixins.device_dtype_mixin.DeviceDtypeModuleMixin</li>
+<li>pytorch_lightning.core.mixins.hparams_mixin.HyperparametersMixin</li>
 <li>pytorch_lightning.core.grads.GradInformation</li>
 <li>pytorch_lightning.core.saving.ModelIO</li>
 <li>pytorch_lightning.core.hooks.ModelHooks</li>
@@ -380,54 +312,177 @@ inheritance.</p></div>
 </ul>
 <h3>Class variables</h3>
 <dl>
-<dt id="src.pl_modules.ger_model.GERModel.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
+<dt id="pl_modules.ger_model.GERModel.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="src.pl_modules.ger_model.GERModel.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
+<dt id="pl_modules.ger_model.GERModel.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="src.pl_modules.ger_model.GERModel.configure_optimizers"><code class="name flex">
+<dt id="pl_modules.ger_model.GERModel.configure_optimizers"><code class="name flex">
 <span>def <span class="ident">configure_optimizers</span></span>(<span>self) ‑> Union[torch.optim.optimizer.Optimizer, dict]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Choose what optimizers and learning-rate schedulers to use in your optimization.
-Normally you'd need one.</p>
+Normally you'd need one. But in the case of GANs or similar you might have multiple.</p>
 <h2 id="return">Return</h2>
-<p>Any of these 6 options.
-- Single optimizer.
-- List or Tuple - List of optimizers.
-- Two lists - The first list has multiple optimizers, the second a list of
-LR schedulers (or lr_dict).
-- Dictionary, with an 'optimizer' key, and (optionally) a 'lr_scheduler'
-key whose value is a single LR scheduler or lr_dict.
-- Tuple of dictionaries as described, with an optional 'frequency' key.
-- None - Fit will run without any optimizer.</p></div>
+<p>Any of these 6 options.</p>
+<ul>
+<li><strong>Single optimizer</strong>.</li>
+<li><strong>List or Tuple</strong> of optimizers.</li>
+<li><strong>Two lists</strong> - The first list has multiple optimizers, and the second has multiple LR schedulers
+(or multiple <code>lr_dict</code>).</li>
+<li><strong>Dictionary</strong>, with an <code>"optimizer"</code> key, and (optionally) a <code>"lr_scheduler"</code>
+key whose value is a single LR scheduler or <code>lr_dict</code>.</li>
+<li><strong>Tuple of dictionaries</strong> as described above, with an optional <code>"frequency"</code> key.</li>
+<li><strong>None</strong> - Fit will run without any optimizer.</li>
+</ul>
+<p>The <code>lr_dict</code> is a dictionary which contains the scheduler and its associated configuration.
+The default configuration is shown below.</p>
+<p>.. code-block:: python</p>
+<pre><code>lr_dict = {
+    # REQUIRED: The scheduler instance
+    "scheduler": lr_scheduler,
+    # The unit of the scheduler's step size, could also be 'step'.
+    # 'epoch' updates the scheduler on epoch end whereas 'step'
+    # updates it after a optimizer update.
+    "interval": "epoch",
+    # How many epochs/steps should pass between calls to
+    # &lt;code&gt;scheduler.step()&lt;/code&gt;. 1 corresponds to updating the learning
+    # rate after every epoch/step.
+    "frequency": 1,
+    # Metric to to monitor for schedulers like &lt;code&gt;ReduceLROnPlateau&lt;/code&gt;
+    "monitor": "val_loss",
+    # If set to &lt;code&gt;True&lt;/code&gt;, will enforce that the value specified 'monitor'
+    # is available when the scheduler is updated, thus stopping
+    # training if not found. If set to &lt;code&gt;False&lt;/code&gt;, it will only produce a warning
+    "strict": True,
+    # If using the &lt;code&gt;LearningRateMonitor&lt;/code&gt; callback to monitor the
+    # learning rate progress, this keyword can be used to specify
+    # a custom logged name
+    "name": None,
+}
+</code></pre>
+<p>When there are schedulers in which the <code>.step()</code> method is conditioned on a value, such as the
+:class:<code>torch.optim.lr_scheduler.ReduceLROnPlateau</code> scheduler, Lightning requires that the <code>lr_dict</code>
+contains the keyword <code>"monitor"</code> set to the metric name that the scheduler should be conditioned on.</p>
+<div class="admonition testcode">
+<p class="admonition-title">Testcode</p>
+<h1 id="the-reducelronplateau-scheduler-requires-a-monitor">The ReduceLROnPlateau scheduler requires a monitor</h1>
+<p>def configure_optimizers(self):
+optimizer = Adam(&hellip;)
+return {
+"optimizer": optimizer,
+"lr_scheduler": {
+"scheduler": ReduceLROnPlateau(optimizer, &hellip;),
+"monitor": "metric_to_track",
+},
+}</p>
+<h1 id="in-the-case-of-two-optimizers-only-one-using-the-reducelronplateau-scheduler">In the case of two optimizers, only one using the ReduceLROnPlateau scheduler</h1>
+<p>def configure_optimizers(self):
+optimizer1 = Adam(&hellip;)
+optimizer2 = SGD(&hellip;)
+scheduler1 = ReduceLROnPlateau(optimizer1, &hellip;)
+scheduler2 = LambdaLR(optimizer2, &hellip;)
+return (
+{
+"optimizer": optimizer1,
+"lr_scheduler": {
+"scheduler": scheduler1,
+"monitor": "metric_to_track",
+},
+},
+{"optimizer": optimizer2, "lr_scheduler": scheduler2},
+)</p>
+</div>
+<p>Metrics can be made available to monitor by simply logging it using
+<code>self.log('metric_to_track', metric_val)</code> in your :class:<code>~pytorch_lightning.core.lightning.LightningModule</code>.</p>
+<h2 id="note">Note</h2>
+<p>The <code>frequency</code> value specified in a dict along with the <code>optimizer</code> key is an int corresponding
+to the number of sequential batches optimized with the specific optimizer.
+It should be given to none or to all of the optimizers.
+There is a difference between passing multiple optimizers in a list,
+and passing multiple optimizers in dictionaries with a frequency of 1:</p>
+<pre><code>- In the former case, all optimizers will operate on the given batch in each optimization step.
+- In the latter, only one optimizer will operate on the given batch at every step.
+</code></pre>
+<p>This is different from the <code>frequency</code> value specified in the <code>lr_dict</code> mentioned above.</p>
+<p>.. code-block:: python</p>
+<pre><code>def configure_optimizers(self):
+    optimizer_one = torch.optim.SGD(self.model.parameters(), lr=0.01)
+    optimizer_two = torch.optim.SGD(self.model.parameters(), lr=0.01)
+    return [
+        {"optimizer": optimizer_one, "frequency": 5},
+        {"optimizer": optimizer_two, "frequency": 10},
+    ]
+</code></pre>
+<p>In this example, the first optimizer will be used for the first 5 steps,
+the second optimizer for the next 10 steps and that cycle will continue.
+If an LR scheduler is specified for an optimizer using the <code>lr_scheduler</code> key in the above dict,
+the scheduler will only be updated when its optimizer is being used.</p>
+<p>Examples::</p>
+<pre><code># most cases. no learning rate scheduler
+def configure_optimizers(self):
+    return Adam(self.parameters(), lr=1e-3)
+
+# multiple optimizer case (e.g.: GAN)
+def configure_optimizers(self):
+    gen_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    dis_opt = Adam(self.model_dis.parameters(), lr=0.02)
+    return gen_opt, dis_opt
+
+# example with learning rate schedulers
+def configure_optimizers(self):
+    gen_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    dis_opt = Adam(self.model_dis.parameters(), lr=0.02)
+    dis_sch = CosineAnnealing(dis_opt, T_max=10)
+    return [gen_opt, dis_opt], [dis_sch]
+
+# example with step-based learning rate schedulers
+# each optimizer has its own scheduler
+def configure_optimizers(self):
+    gen_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    dis_opt = Adam(self.model_dis.parameters(), lr=0.02)
+    gen_sch = {
+        'scheduler': ExponentialLR(gen_opt, 0.99),
+        'interval': 'step'  # called after each training step
+    }
+    dis_sch = CosineAnnealing(dis_opt, T_max=10) # called every epoch
+    return [gen_opt, dis_opt], [gen_sch, dis_sch]
+
+# example with optimizer frequencies
+# see training procedure in &lt;code&gt;Improved Training of Wasserstein GANs&lt;/code&gt;, Algorithm 1
+# &lt;https://arxiv.org/abs/1704.00028&gt;
+def configure_optimizers(self):
+    gen_opt = Adam(self.model_gen.parameters(), lr=0.01)
+    dis_opt = Adam(self.model_dis.parameters(), lr=0.02)
+    n_critic = 5
+    return (
+        {'optimizer': dis_opt, 'frequency': n_critic},
+        {'optimizer': gen_opt, 'frequency': 1}
+    )
+</code></pre>
+<h2 id="note_1">Note</h2>
+<p>Some things to know:</p>
+<ul>
+<li>Lightning calls <code>.backward()</code> and <code>.step()</code> on each optimizer and learning rate scheduler as needed.</li>
+<li>If you use 16-bit precision (<code>precision=16</code>), Lightning will automatically handle the optimizers.</li>
+<li>If you use multiple optimizers, :meth:<code>training_step</code> will have an additional <code>optimizer_idx</code> parameter.</li>
+<li>If you use :class:<code>torch.optim.LBFGS</code>, Lightning handles the closure function automatically for you.</li>
+<li>If you use multiple optimizers, gradients will be calculated only for the parameters of current optimizer
+at each training step.</li>
+<li>If you need to control how often those optimizers step or override the default <code>.step()</code> schedule,
+override the :meth:<code>optimizer_step</code> hook.</li>
+</ul></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def configure_optimizers(
-    self,
-) -&gt; Union[Optimizer, dict]:
-    &#34;&#34;&#34;
-    Choose what optimizers and learning-rate schedulers to use in your optimization.
-    Normally you&#39;d need one.
-    Return:
-        Any of these 6 options.
-        - Single optimizer.
-        - List or Tuple - List of optimizers.
-        - Two lists - The first list has multiple optimizers, the second a list of
-                      LR schedulers (or lr_dict).
-        - Dictionary, with an &#39;optimizer&#39; key, and (optionally) a &#39;lr_scheduler&#39;
-          key whose value is a single LR scheduler or lr_dict.
-        - Tuple of dictionaries as described, with an optional &#39;frequency&#39; key.
-        - None - Fit will run without any optimizer.
-    &#34;&#34;&#34;
+<pre><code class="python">def configure_optimizers(self) -&gt; Union[Optimizer, dict]:
     param_optimizer = list(self.model.named_parameters())
     no_decay = [&#34;bias&#34;, &#34;gamma&#34;, &#34;beta&#34;]
     optimizer_grouped_parameters = [
@@ -444,27 +499,15 @@ key whose value is a single LR scheduler or lr_dict.
             &#34;weight_decay_rate&#34;: 0.0,
         },
     ]
-    opt = hydra.utils.instantiate(
-        self.hparams.optim.optimizer,
-        params=optimizer_grouped_parameters,
-        _convert_=&#34;partial&#34;,
-    )
 
-    if self.hparams.optim.use_lr_scheduler:
-        scheduler = hydra.utils.instantiate(
-            self.hparams.optim.lr_scheduler, optimizer=opt
-        )
-        return {
-            &#34;optimizer&#34;: opt,
-            &#34;lr_scheduler&#34;: scheduler,
-            &#34;monitor&#34;: self.hparams.optim.monitor_metric,
-        }
+    opt = self.optim(lr=4e-5, params=optimizer_grouped_parameters)
+    scheduler = self.scheduler(optimizer=opt, patience=2, verbose=True)
 
-    return opt</code></pre>
+    return {&#34;optimizer&#34;: opt, &#34;lr_scheduler&#34;: scheduler, &#34;monitor&#34;: &#34;train_loss&#34;}</code></pre>
 </details>
 </dd>
-<dt id="src.pl_modules.ger_model.GERModel.forward"><code class="name flex">
-<span>def <span class="ident">forward</span></span>(<span>self, input_ids, attention_mask, labels=None, **kwargs) ‑> Callable[..., Any]</span>
+<dt id="pl_modules.ger_model.GERModel.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, input_ids, attention_mask, labels=None) ‑> Callable[..., Any]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Method for the forward pass.
@@ -479,7 +522,7 @@ this method in order to compute the output predictions and the loss.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def forward(self, input_ids, attention_mask, labels=None, **kwargs):
+<pre><code class="python">def forward(self, input_ids, attention_mask, labels=None):
     &#34;&#34;&#34;
     Method for the forward pass.
     &#39;training_step&#39;, &#39;validation_step&#39; and &#39;test_step&#39; should call
@@ -497,9 +540,7 @@ this method in order to compute the output predictions and the loss.</p>
         )
         batch_out = []
         for id_batch, logit_batch in zip(input_ids, outputs[&#34;logits&#34;]):
-            tokens: list = tokenizer.convert_ids_to_tokens(  # type:ignore
-                id_batch.tolist()
-            )
+            tokens: list = tokenizer.convert_ids_to_tokens(id_batch.tolist())
             tags: list = logit_batch.argmax(dim=1).tolist()
             tokens, tags = combine_subwords(tokens, tags)
             tokens, tags = combine_biluo(tokens, tags)
@@ -508,8 +549,8 @@ this method in order to compute the output predictions and the loss.</p>
     return outputs</code></pre>
 </details>
 </dd>
-<dt id="src.pl_modules.ger_model.GERModel.step"><code class="name flex">
-<span>def <span class="ident">step</span></span>(<span>self, batch: Any, batch_idx: int) ‑> dict</span>
+<dt id="pl_modules.ger_model.GERModel.step"><code class="name flex">
+<span>def <span class="ident">step</span></span>(<span>self, batch: Any, _: int) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -517,7 +558,7 @@ this method in order to compute the output predictions and the loss.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def step(self, batch: Any, batch_idx: int) -&gt; dict:
+<pre><code class="python">def step(self, batch: Any, _: int) -&gt; dict:
     outputs = self(
         input_ids=batch[&#34;input_ids&#34;],
         attention_mask=batch[&#34;attention_mask&#34;],
@@ -529,7 +570,98 @@ this method in order to compute the output predictions and the loss.</p>
     }</code></pre>
 </details>
 </dd>
-<dt id="src.pl_modules.ger_model.GERModel.training_step"><code class="name flex">
+<dt id="pl_modules.ger_model.GERModel.test_step"><code class="name flex">
+<span>def <span class="ident">test_step</span></span>(<span>self, batch: Any, batch_idx: int) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Operates on a single batch of data from the test set.
+In this step you'd normally generate examples or calculate anything of interest
+such as accuracy.</p>
+<p>.. code-block:: python</p>
+<pre><code># the pseudocode for these calls
+test_outs = []
+for test_batch in test_data:
+    out = test_step(test_batch)
+    test_outs.append(out)
+test_epoch_end(test_outs)
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt>batch (:class:<code>~torch.Tensor</code> | (:class:<code>~torch.Tensor</code>, &hellip;) | [:class:<code>~torch.Tensor</code>, &hellip;]):</dt>
+<dt>The output of your :class:<code>~torch.utils.data.DataLoader</code>. A tensor, tuple or list.</dt>
+<dt><strong><code>batch_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>The index of this batch.</dd>
+<dt><strong><code>dataloader_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>The index of the dataloader that produced this batch
+(only if multiple test dataloaders used).</dd>
+</dl>
+<h2 id="return">Return</h2>
+<p>Any of.</p>
+<ul>
+<li>Any object or value</li>
+<li><code>None</code> - Testing will skip to the next batch</li>
+</ul>
+<p>.. code-block:: python</p>
+<pre><code># if you have one test dataloader:
+def test_step(self, batch, batch_idx):
+    ...
+
+
+# if you have multiple test dataloaders:
+def test_step(self, batch, batch_idx, dataloader_idx):
+    ...
+</code></pre>
+<p>Examples::</p>
+<pre><code># CASE 1: A single test dataset
+def test_step(self, batch, batch_idx):
+    x, y = batch
+
+    # implement your own
+    out = self(x)
+    loss = self.loss(out, y)
+
+    # log 6 example images
+    # or generated text... or whatever
+    sample_imgs = x[:6]
+    grid = torchvision.utils.make_grid(sample_imgs)
+    self.logger.experiment.add_image('example_images', grid, 0)
+
+    # calculate acc
+    labels_hat = torch.argmax(out, dim=1)
+    test_acc = torch.sum(y == labels_hat).item() / (len(y) * 1.0)
+
+    # log the outputs!
+    self.log_dict({'test_loss': loss, 'test_acc': test_acc})
+</code></pre>
+<p>If you pass in multiple test dataloaders, :meth:<code>test_step</code> will have an additional argument.</p>
+<p>.. code-block:: python</p>
+<pre><code># CASE 2: multiple test dataloaders
+def test_step(self, batch, batch_idx, dataloader_idx):
+    # dataloader_idx tells you which dataset this is.
+    ...
+</code></pre>
+<h2 id="note">Note</h2>
+<p>If you don't need to test you don't need to implement this method.</p>
+<h2 id="note_1">Note</h2>
+<p>When the :meth:<code>test_step</code> is called, the model has been put in eval mode and
+PyTorch gradients have been disabled. At the end of the test epoch, the model goes back
+to training mode and gradients are enabled.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_step(self, batch: Any, batch_idx: int) -&gt; dict:
+    step_out = self.step(batch, batch_idx)
+    loss = step_out[&#34;loss&#34;]
+    test_f1 = self.test_metric(
+        step_out[&#34;preds&#34;],
+        batch[&#34;labels&#34;],
+    ).pop(&#34;overall_f1&#34;)
+    self.log_dict({&#34;test_loss&#34;: loss, &#34;test_f1&#34;: test_f1})
+    return loss</code></pre>
+</details>
+</dd>
+<dt id="pl_modules.ger_model.GERModel.training_step"><code class="name flex">
 <span>def <span class="ident">training_step</span></span>(<span>self, batch: Any, batch_idx: int) ‑> dict</span>
 </code></dt>
 <dd>
@@ -545,16 +677,15 @@ the progress bar or logger.</p>
 <dd>When using multiple optimizers, this argument will also be present.</dd>
 </dl>
 <p>hiddens(:class:<code>~torch.Tensor</code>): Passed in if
-:paramref:<code>~pytorch_lightning.trainer.trainer.Trainer.truncated_bptt_steps</code> &gt; 0.</p>
+:paramref:<code>~pytorch_lightning.core.lightning.LightningModule.truncated_bptt_steps</code> &gt; 0.</p>
 <h2 id="return">Return</h2>
 <p>Any of.</p>
 <ul>
 <li>:class:<code>~torch.Tensor</code> - The loss tensor</li>
 <li><code>dict</code> - A dictionary. Can include any keys, but must include the key <code>'loss'</code></li>
-<li><code>None</code> - Training will skip to the next batch</li>
+<li><code>None</code> - Training will skip to the next batch. This is only for automatic optimization.
+This is not supported for multi-GPU or TPU, or using <code>DeepSpeed</code>.</li>
 </ul>
-<h2 id="note">Note</h2>
-<p>Returning <code>None</code> is currently not supported for multi-GPU or TPU, or with 16-bit precision enabled.</p>
 <p>In this step you'd normally do the forward pass and calculate the loss for a batch.
 You can also do fancier things like multiple forward passes or something model specific.</p>
 <p>Example::</p>
@@ -571,8 +702,10 @@ You can also do fancier things like multiple forward passes or something model s
 def training_step(self, batch, batch_idx, optimizer_idx):
     if optimizer_idx == 0:
         # do training_step with encoder
+        ...
     if optimizer_idx == 1:
         # do training_step with decoder
+        ...
 </code></pre>
 <p>If you add truncated back propagation through time you will also get an additional
 argument with the hidden states of the previous step.</p>
@@ -583,9 +716,9 @@ def training_step(self, batch, batch_idx, hiddens):
     ...
     out, hiddens = self.lstm(data, hiddens)
     ...
-    return {'loss': loss, 'hiddens': hiddens}
+    return {"loss": loss, "hiddens": hiddens}
 </code></pre>
-<h2 id="note_1">Note</h2>
+<h2 id="note">Note</h2>
 <p>The loss value shown in the progress bar is smoothed (averaged) over the last values,
 so it differs from the actual loss returned in train/validation step.</p></div>
 <details class="source">
@@ -594,21 +727,21 @@ so it differs from the actual loss returned in train/validation step.</p></div>
 </summary>
 <pre><code class="python">def training_step(self, batch: Any, batch_idx: int) -&gt; dict:
     step_out = self.step(batch, batch_idx)
-    train_metrics = self.train_metric(
-        preds=step_out[&#34;preds&#34;], targets=batch[&#34;labels&#34;]
+    loss = step_out[&#34;loss&#34;]
+    train_f1 = self.train_metric(
+        preds=step_out[&#34;preds&#34;],
+        targets=batch[&#34;labels&#34;],
+    ).pop(&#34;overall_f1&#34;)
+    self.log_dict(
+        {&#34;train_loss&#34;: loss, &#34;train_f1&#34;: train_f1},
+        on_step=True,
+        on_epoch=True,
+        prog_bar=True,
     )
-    train_f1 = train_metrics.pop(&#34;overall_f1&#34;)
-
-    self.log(&#34;train_loss&#34;, step_out[&#34;loss&#34;])
-    self.log(&#34;train_f1&#34;, train_f1, prog_bar=True)
-    return {
-        &#34;loss&#34;: step_out[&#34;loss&#34;],
-        &#34;train_f1&#34;: train_f1,
-        &#34;train_metrics&#34;: train_metrics,
-    }</code></pre>
+    return loss</code></pre>
 </details>
 </dd>
-<dt id="src.pl_modules.ger_model.GERModel.validation_step"><code class="name flex">
+<dt id="pl_modules.ger_model.GERModel.validation_step"><code class="name flex">
 <span>def <span class="ident">validation_step</span></span>(<span>self, batch: Any, batch_idx: int) ‑> dict</span>
 </code></dt>
 <dd>
@@ -633,24 +766,29 @@ validation_epoch_end(val_outs)
 (only if multiple val dataloaders used)</dd>
 </dl>
 <h2 id="return">Return</h2>
-<p>Any of.</p>
 <ul>
 <li>Any object or value</li>
 <li><code>None</code> - Validation will skip to the next batch</li>
 </ul>
 <p>.. code-block:: python</p>
 <pre><code># pseudocode of order
-out = validation_step()
-if defined('validation_step_end'):
-    out = validation_step_end(out)
-out = validation_epoch_end(out)
+val_outs = []
+for val_batch in val_data:
+    out = validation_step(val_batch)
+    if defined("validation_step_end"):
+        out = validation_step_end(out)
+    val_outs.append(out)
+val_outs = validation_epoch_end(val_outs)
 </code></pre>
 <p>.. code-block:: python</p>
 <pre><code># if you have one val dataloader:
-def validation_step(self, batch, batch_idx)
+def validation_step(self, batch, batch_idx):
+    ...
+
 
 # if you have multiple val dataloaders:
-def validation_step(self, batch, batch_idx, dataloader_idx)
+def validation_step(self, batch, batch_idx, dataloader_idx):
+    ...
 </code></pre>
 <p>Examples::</p>
 <pre><code># CASE 1: A single validation dataset
@@ -679,6 +817,7 @@ def validation_step(self, batch, batch_idx):
 <pre><code># CASE 2: multiple validation dataloaders
 def validation_step(self, batch, batch_idx, dataloader_idx):
     # dataloader_idx tells you which dataset this is.
+    ...
 </code></pre>
 <h2 id="note">Note</h2>
 <p>If you don't need to validate you don't need to implement this method.</p>
@@ -692,16 +831,18 @@ the model goes back to training mode and gradients are enabled.</p></div>
 </summary>
 <pre><code class="python">def validation_step(self, batch: Any, batch_idx: int) -&gt; dict:
     step_out = self.step(batch, batch_idx)
-    val_metrics = self.val_metric(preds=step_out[&#34;preds&#34;], targets=batch[&#34;labels&#34;])
-    val_f1 = val_metrics.pop(&#34;overall_f1&#34;)
-    self.log(&#34;val_loss&#34;, step_out[&#34;loss&#34;])
-    self.log(&#34;val_f1&#34;, val_f1, prog_bar=True)
-    self.log(&#34;val&#34;, val_metrics)
-    return {
-        &#34;val_loss&#34;: step_out[&#34;loss&#34;],
-        &#34;val_f1&#34;: val_f1,
-        &#34;val_metrics&#34;: val_metrics,
-    }</code></pre>
+    loss = step_out[&#34;loss&#34;]
+    val_f1 = self.val_metric(
+        preds=step_out[&#34;preds&#34;],
+        targets=batch[&#34;labels&#34;],
+    ).pop(&#34;overall_f1&#34;)
+    self.log_dict(
+        {&#34;val_loss&#34;: loss, &#34;val_f1&#34;: val_f1},
+        on_step=False,
+        on_epoch=True,
+        prog_bar=True,
+    )
+    return loss</code></pre>
 </details>
 </dd>
 </dl>
@@ -717,26 +858,22 @@ the model goes back to training mode and gradients are enabled.</p></div>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="src.pl_modules" href="index.html">src.pl_modules</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="src.pl_modules.ger_model.main" href="#src.pl_modules.ger_model.main">main</a></code></li>
+<li><code><a title="pl_modules" href="index.html">pl_modules</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="src.pl_modules.ger_model.GERModel" href="#src.pl_modules.ger_model.GERModel">GERModel</a></code></h4>
+<h4><code><a title="pl_modules.ger_model.GERModel" href="#pl_modules.ger_model.GERModel">GERModel</a></code></h4>
 <ul class="">
-<li><code><a title="src.pl_modules.ger_model.GERModel.configure_optimizers" href="#src.pl_modules.ger_model.GERModel.configure_optimizers">configure_optimizers</a></code></li>
-<li><code><a title="src.pl_modules.ger_model.GERModel.dump_patches" href="#src.pl_modules.ger_model.GERModel.dump_patches">dump_patches</a></code></li>
-<li><code><a title="src.pl_modules.ger_model.GERModel.forward" href="#src.pl_modules.ger_model.GERModel.forward">forward</a></code></li>
-<li><code><a title="src.pl_modules.ger_model.GERModel.step" href="#src.pl_modules.ger_model.GERModel.step">step</a></code></li>
-<li><code><a title="src.pl_modules.ger_model.GERModel.training" href="#src.pl_modules.ger_model.GERModel.training">training</a></code></li>
-<li><code><a title="src.pl_modules.ger_model.GERModel.training_step" href="#src.pl_modules.ger_model.GERModel.training_step">training_step</a></code></li>
-<li><code><a title="src.pl_modules.ger_model.GERModel.validation_step" href="#src.pl_modules.ger_model.GERModel.validation_step">validation_step</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.configure_optimizers" href="#pl_modules.ger_model.GERModel.configure_optimizers">configure_optimizers</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.dump_patches" href="#pl_modules.ger_model.GERModel.dump_patches">dump_patches</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.forward" href="#pl_modules.ger_model.GERModel.forward">forward</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.step" href="#pl_modules.ger_model.GERModel.step">step</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.test_step" href="#pl_modules.ger_model.GERModel.test_step">test_step</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.training" href="#pl_modules.ger_model.GERModel.training">training</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.training_step" href="#pl_modules.ger_model.GERModel.training_step">training_step</a></code></li>
+<li><code><a title="pl_modules.ger_model.GERModel.validation_step" href="#pl_modules.ger_model.GERModel.validation_step">validation_step</a></code></li>
 </ul>
 </li>
 </ul>
@@ -745,7 +882,7 @@ the model goes back to training mode and gradients are enabled.</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

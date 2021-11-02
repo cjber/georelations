@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
-<title>src.pl_data.csv_dataset API documentation</title>
+<meta name="generator" content="pdoc 0.10.0" />
+<title>pl_data.csv_dataset API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,48 +19,35 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>src.pl_data.csv_dataset</code></h1>
+<h1 class="title">Module <code>pl_data.csv_dataset</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from ast import literal_eval
-
-import hydra
-import omegaconf
-from omegaconf import ValueNode
-import pandas as pd
+<pre><code class="python">import pandas as pd
+from pathlib import Path
+from src.common.utils import Const, Label, convert_examples_to_features
 from torch.utils.data import Dataset
-from transformers.models.auto.tokenization_auto import AutoTokenizer
-
-from src.common.model_utils import Label, convert_examples_to_features
-from src.common.utils import PROJECT_ROOT
+from transformers import AutoTokenizer  # type: ignore
 
 
-class CSVDataset(Dataset):
+class RELDataset(Dataset):
     def __init__(
         self,
-        name: ValueNode,
-        path: ValueNode,
-        model_name: ValueNode,
-        max_token_len: ValueNode,
-        special_tokens: ValueNode,
+        path: Path,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
-        self.name = name
-        self.data: pd.DataFrame = pd.read_csv(
-            path, header=None, names=[&#34;label&#34;, &#34;text_a&#34;]  # type: ignore
+        self.data: pd.DataFrame = pd.read_csv(path)
+        self.data[&#34;relation&#34;] = self.data[&#34;relation&#34;].apply(
+            lambda x: Label(&#34;REL&#34;).labels[x]
         )
-        self.model_name = model_name
-        self.max_token_len = int(max_token_len)
-        self.special_tokens: list[str] = literal_eval(special_tokens)
 
-        self.tokenizer = tokenizer.from_pretrained(self.model_name)
+        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
         self.tokenizer.add_special_tokens(
-            {&#34;additional_special_tokens&#34;: self.special_tokens}
+            {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
         )
 
     def __len__(self):
@@ -68,22 +55,11 @@ class CSVDataset(Dataset):
 
     def __getitem__(self, index: int):
         item = self.data.iloc[index]
-
-        item.label = Label(&#34;REL&#34;).labels[item.label]
         return convert_examples_to_features(
-            item, max_seq_len=self.max_token_len, tokenizer=self.tokenizer
-        )
-
-
-@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;rel&#34;)
-def main(cfg: omegaconf.DictConfig):
-    dataset: CSVDataset = hydra.utils.instantiate(
-        cfg.data.datamodule.datasets.train, _recursive_=False
-    )
-
-
-if __name__ == &#34;__main__&#34;:
-    main()</code></pre>
+            item,
+            max_seq_len=Const.MAX_TOKEN_LEN,
+            tokenizer=self.tokenizer,
+        )</code></pre>
 </details>
 </section>
 <section>
@@ -91,32 +67,13 @@ if __name__ == &#34;__main__&#34;:
 <section>
 </section>
 <section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="src.pl_data.csv_dataset.main"><code class="name flex">
-<span>def <span class="ident">main</span></span>(<span>cfg: omegaconf.dictconfig.DictConfig)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;rel&#34;)
-def main(cfg: omegaconf.DictConfig):
-    dataset: CSVDataset = hydra.utils.instantiate(
-        cfg.data.datamodule.datasets.train, _recursive_=False
-    )</code></pre>
-</details>
-</dd>
-</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="src.pl_data.csv_dataset.CSVDataset"><code class="flex name class">
-<span>class <span class="ident">CSVDataset</span></span>
-<span>(</span><span>name: omegaconf.nodes.ValueNode, path: omegaconf.nodes.ValueNode, model_name: omegaconf.nodes.ValueNode, max_token_len: omegaconf.nodes.ValueNode, special_tokens: omegaconf.nodes.ValueNode, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
+<dt id="pl_data.csv_dataset.RELDataset"><code class="flex name class">
+<span>class <span class="ident">RELDataset</span></span>
+<span>(</span><span>path: pathlib.Path, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>An abstract class representing a :class:<code>Dataset</code>.</p>
@@ -137,28 +94,21 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class CSVDataset(Dataset):
+<pre><code class="python">class RELDataset(Dataset):
     def __init__(
         self,
-        name: ValueNode,
-        path: ValueNode,
-        model_name: ValueNode,
-        max_token_len: ValueNode,
-        special_tokens: ValueNode,
+        path: Path,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
-        self.name = name
-        self.data: pd.DataFrame = pd.read_csv(
-            path, header=None, names=[&#34;label&#34;, &#34;text_a&#34;]  # type: ignore
+        self.data: pd.DataFrame = pd.read_csv(path)
+        self.data[&#34;relation&#34;] = self.data[&#34;relation&#34;].apply(
+            lambda x: Label(&#34;REL&#34;).labels[x]
         )
-        self.model_name = model_name
-        self.max_token_len = int(max_token_len)
-        self.special_tokens: list[str] = literal_eval(special_tokens)
 
-        self.tokenizer = tokenizer.from_pretrained(self.model_name)
+        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
         self.tokenizer.add_special_tokens(
-            {&#34;additional_special_tokens&#34;: self.special_tokens}
+            {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
         )
 
     def __len__(self):
@@ -166,10 +116,10 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 
     def __getitem__(self, index: int):
         item = self.data.iloc[index]
-
-        item.label = Label(&#34;REL&#34;).labels[item.label]
         return convert_examples_to_features(
-            item, max_seq_len=self.max_token_len, tokenizer=self.tokenizer
+            item,
+            max_seq_len=Const.MAX_TOKEN_LEN,
+            tokenizer=self.tokenizer,
         )</code></pre>
 </details>
 <h3>Ancestors</h3>
@@ -189,18 +139,13 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="src.pl_data" href="index.html">src.pl_data</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="src.pl_data.csv_dataset.main" href="#src.pl_data.csv_dataset.main">main</a></code></li>
+<li><code><a title="pl_data" href="index.html">pl_data</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="src.pl_data.csv_dataset.CSVDataset" href="#src.pl_data.csv_dataset.CSVDataset">CSVDataset</a></code></h4>
+<h4><code><a title="pl_data.csv_dataset.RELDataset" href="#pl_data.csv_dataset.RELDataset">RELDataset</a></code></h4>
 </li>
 </ul>
 </li>
@@ -208,7 +153,7 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

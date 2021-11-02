@@ -1,13 +1,6 @@
-import logging
+import json
 from psaw import PushshiftAPI
 from tqdm import tqdm
-
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-
-logger = logging.getLogger("psaw")
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
 
 SUBREDDITS = [
     "unitedkingdom",
@@ -71,7 +64,7 @@ SUBREDDITS = [
     "coventry",
     "hereford",
     "kenilworth",
-    "malvern/",
+    "malvern",
     "shrewsburyuk",
     "shropshire",
     "stafford",
@@ -151,12 +144,11 @@ SUBREDDITS = [
     "surrey",
     "tadley",
     "thanet",
-    "Tunbridgewells/",
+    "Tunbridgewells",
     "winchesterUK",
     "wokingham",
     "worthing",
     "London",
-    "aces",
     "bromley",
     "clapham",
     "croydon",
@@ -236,11 +228,14 @@ SUBREDDITS = [
     "guernsey",
 ]
 
-api = PushshiftAPI()
-for subreddit in SUBREDDITS:
-    gen = api.search_comments(subreddit=subreddit)
+api = PushshiftAPI(shards_down_behavior=None)
+OUT_FILE = "data/reddit_comments/comments.json"
 
-    with open(f"data/comments/{subreddit}.txt", "w") as f:
-        for comment in tqdm(gen):
-            f.write(comment.body)
+with open(OUT_FILE, "w") as f:
+    for subreddit in tqdm(SUBREDDITS):
+        print(f"Getting comments from {subreddit}.")
+        gen = api.search_comments(subreddit=subreddit)
+        for obj in tqdm(gen):
+            obj = {"subreddit": obj.subreddit, "text": obj.body}
+            json.dump(obj, f)
             f.write("\n")

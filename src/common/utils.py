@@ -1,15 +1,45 @@
 import numpy as np
 import pandas as pd
-import string
 import torch
 from collections import Counter
+from torch import Tensor
 from typing import Union
+
+tdict = dict[str, Tensor]
 
 
 class Const:
-    MODEL_NAME = "distilbert-base-cased"
+    MODEL_NAME = "bert-base-uncased"
     MAX_TOKEN_LEN = 256
-    SPECIAL_TOKENS = ["<head>", "</head>", "<tail>", "</tail>"]
+    SPECIAL_TOKENS = [
+        "<head>",
+        "</head>",
+        "<tail>",
+        "</tail>",
+        "<url>",
+        "<user>",
+        "<date>",
+        "<number>",
+        "<money>",
+        "<email>",
+        "<percent>",
+        "<phone>",
+        "<time>",
+        "<hashtag>",
+        "</hashtag>",
+    ]
+    NORMALIZE = [
+        "url",
+        "email",
+        "percent",
+        "money",
+        "phone",
+        "user",
+        "time",
+        "url",
+        "date",
+        "number",
+    ]
 
 
 class Label:
@@ -27,11 +57,11 @@ class Label:
 
         if self.name == "GER":
             self.labels: dict[str, int] = {
-                "B-PLACE": 0,
-                "I-PLACE": 1,
-                "L-PLACE": 2,
-                "U-PLACE": 3,
-                "O": 4,
+                "O": 0,
+                "B-location": 1,
+                "I-location": 2,
+                "L-location": 3,
+                "U-location": 4,
             }
         elif self.name == "REL":
             self.labels: dict[str, int] = {
@@ -44,8 +74,11 @@ class Label:
 
 
 def encode_labels(
-    tokens: list[str], labels: list[int], tokenizer, max_token_len=128
-) -> tuple[dict, np.ndarray]:
+    tokens: list[str],
+    labels: list[int],
+    tokenizer,
+    max_token_len: int,
+) -> tuple[dict[str, Tensor], Tensor]:
     """
     Encode list of tokens and labels into subwords.
 
@@ -78,7 +111,7 @@ def encode_labels(
     >>> tokens = ['Testing', 'this', 'for', 'doctest', '.']
     >>> labels = [1, 0, 0, 0, 0]
     >>> tokenizer = AutoTokenizer.from_pretrained(
-    ...     'roberta-base', add_prefix_space=True
+    ...     'distilbert-base-cased', add_prefix_space=True
     ... )
     >>> encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
 
@@ -89,41 +122,28 @@ def encode_labels(
         tokens,
         is_split_into_words=True,
         return_attention_mask=True,
+        return_offsets_mapping=True,
         max_length=max_token_len,
         padding="max_length",
         truncation=True,
         return_tensors="pt",
     )
-    subwords = np.array(
-        tokenizer.tokenize(
-            tokens,
-            is_split_into_words=True,
-            add_special_tokens=True,
-            max_length=max_token_len,
-            padding="max_length",
-            truncation=True,
-        )
-    )
 
-    word_idx = [
-        idx
-        for idx, word in enumerate(subwords)
-        if word[0] == "\u0120"  # all non subwords start with this
-    ]
-    labels_encoded = np.ones(len(subwords)) * -100
-    # if truncated remove extra labels
-    if len(labels) > (x := len(word_idx)):
-        labels = labels[:x]
-    labels_encoded[word_idx] = labels
+    offset = np.array(encoding.offset_mapping[0])
+    doc_enc_labels = np.ones(max_token_len, dtype=int) * -100  # type: ignore
+    offsets_array = (offset[:, 0] == 0) & (offset[:, 1] != 0)
+    if sum(offsets_array) < len(labels):
+        doc_enc_labels[offsets_array] = labels[: sum(offsets_array)]
+    else:
+        doc_enc_labels[offsets_array] = labels
 
-    return encoding, labels_encoded
+    encoded_labels = torch.LongTensor(doc_enc_labels)
+    return encoding, encoded_labels
 
 
 def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], list[str]]:
     """
     Combines subwords and their tags into normal words with special chars removed.
-
-    WARNING: This removed all punctuation!
 
     Parameters
     ----------
@@ -140,8 +160,8 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     Example
     -------
 
-    >>> tokens = ['ĠVery', 'long', 'word', 'Ġfor', 'Ġdoct', 'est', 'Ġ.']
-    >>> tags = [1, -100, -100, 0, 1, -100, 0]
+    >>> tokens = ['Very', '##long', '##word', 'for', 'doct', '##est', '.']
+    >>> tags = [4, -100, -100, 0, 4, -100, 0]
     >>> tokens, tags = combine_subwords(tokens, tags)
 
     >>> tokens
@@ -150,22 +170,23 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     True
     """
     idx = [
-        idx for idx, token in enumerate(tokens) if token not in ["<pad>", "<s>", "</s>"]
+        idx
+        for idx, token in enumerate(tokens)
+        if token not in ["[CLS]", "[PAD]", "[SEP]"]
     ]
+
     tokens = [tokens[i] for i in idx]
     tags = [tags[i] for i in idx]
 
     for idx, _ in enumerate(tokens):
         idx += 1
-        if (
-            tokens[-idx + 1][0] != "\u0120"
-            and tokens[-idx + 1] not in string.punctuation
-        ):
-            tokens[-idx] = tokens[-idx] + tokens[-idx + 1]
-    idx = [idx for idx, token in enumerate(tokens) if token[0] == "\u0120"]
+        if tokens[-idx + 1].startswith("##"):
+            tokens[-idx] = tokens[-idx] + tokens[-idx + 1][2:]
+    subwords = [i for i, _ in enumerate(tokens) if not tokens[i].startswith("##")]
 
-    tokens = [tokens[i][1:] for i in idx]
-    tags_str: list[str] = [Label("GER").idx[tags[i]] for i in idx]
+    tags = [tags[i] for i in subwords]
+    tokens = [tokens[i] for i in subwords]
+    tags_str: list[str] = [Label("GER").idx[i] for i in tags]
     return tokens, tags_str
 
 
@@ -187,12 +208,12 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
 
     Example:
 
-    >>> tokens = ['New', 'York', 'is', 'big', '.']
-    >>> tags = ['B-PLACE', 'L-PLACE', 'O', 'O', 'O']
+    >>> tokens = ['New', 'York', 'City', 'is', 'big', '.']
+    >>> tags = ['B-PLACE', 'I-PLACE', 'L-City', 'O', 'O', 'O']
     >>> tokens, tags = combine_biluo(tokens, tags)
 
     >>> tokens
-    ['New York', 'is', 'big', '.']
+    ['New York City', 'is', 'big', '.']
     >>> tags
     ['PLACE', 'O', 'O', 'O']
     """
@@ -202,7 +223,7 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
     for idx, tag in enumerate(tags_biluo):
         if idx + 1 < len(tags_biluo) and tag[0] == "B":
             i = 1
-            while tags_biluo[idx + i][0] not in ["B", "O", "U"]:
+            while tags_biluo[idx + i][0] not in ["B", "O"]:
                 tokens_biluo[idx] = tokens_biluo[idx] + " " + tokens_biluo[idx + i]
                 i += 1
                 if idx + i == len(tokens_biluo):
@@ -231,29 +252,29 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], No
     >>> tags = ['PLACE', 'O', 'O', 'PLACE', 'O', 'PLACE']
 
     >>> ents_to_relations(tokens, tags)[0]
-    '<e1> New York </e1> is in <e2> New York </e2> , America'
+    '<head> New York </head> is in <tail> New York </tail> , America'
+    >>> ents_to_relations(tokens, tags)[1]
+    '<head> New York </head> is in New York , <tail> America </tail>'
     """
 
     # check if at least two entities
-    if Counter(tags)["O"] <= len(tags) - 2:
-        first_entity_idx = next(idx for idx, tag in enumerate(tags) if tag != "O")
-        other_entity_idx = [
-            idx
-            for idx, tag in enumerate(tags)
-            if (idx != first_entity_idx) & (tag != "O")
-        ]
+    if Counter(tags)["O"] > len(tags) - 2:
+        return
 
-        tokens[first_entity_idx] = "<e1> " + tokens[first_entity_idx] + " </e1>"
-        sequence_list = []
-        for idx in other_entity_idx:
-            tokens_copy = tokens.copy()
-            tokens_copy[idx] = "<e2> " + tokens_copy[idx] + " </e2>"
-            sequence_list.append(" ".join(tokens_copy))
-        return sequence_list
+    loc_idxs = [idx for idx, tag in enumerate(tags) if tag != "O"]
+    sequence_list = []
+    for i in loc_idxs:
+        for j in loc_idxs:
+            if i != j:
+                tokens_copy = tokens.copy()
+                tokens_copy[i] = "<head> " + tokens_copy[i] + " </head>"
+                tokens_copy[j] = "<tail> " + tokens_copy[j] + " </tail>"
+                sequence_list.append(" ".join(tokens_copy))
+    return sequence_list
 
 
 def convert_examples_to_features(
-    item: pd.Series,
+    item: Union[pd.Series, str],
     max_seq_len: int,
     tokenizer,
     labels: bool = True,
@@ -281,6 +302,10 @@ def convert_examples_to_features(
             truncation=True,
             return_tensors="pt",
         )
+
+    # if tokenization shortens the string
+    if any(x not in item for x in ["<head>", "</head>", "<tail>", "</tail>"]):
+        return None
 
     e11_p = tokens_a.index("<head>")  # the start position of entity1
     e12_p = tokens_a.index("</head>")  # the end position of entity1

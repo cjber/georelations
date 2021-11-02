@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
-<title>src.pl_data.conll_dataset API documentation</title>
+<meta name="generator" content="pdoc 0.10.0" />
+<title>pl_data.conll_dataset API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>src.pl_data.conll_dataset</code></h1>
+<h1 class="title">Module <code>pl_data.conll_dataset</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -27,33 +27,24 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import itertools
-
-import hydra
-import omegaconf
-from omegaconf import ValueNode
-from spacy.training import iob_to_biluo
 import torch
+from pathlib import Path
+from spacy.training.iob_utils import iob_to_biluo
+from src.common.utils import Const, Label, encode_labels
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
-
-from src.common.model_utils import Label, encode_labels
-from src.common.utils import PROJECT_ROOT
 
 
 class CoNLLDataset(Dataset):
     def __init__(
         self,
-        name: ValueNode,
-        path: ValueNode,
-        model_name: ValueNode,
-        max_token_len: ValueNode,
+        path: Path,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
         self.path = path
-        self.name = name
-        self.model_name = model_name
-        self.max_token_len = int(max_token_len)  # type: ignore
+        self.model_name = Const.MODEL_NAME
+        self.max_token_len = Const.MAX_TOKEN_LEN
 
         self.data: list[dict[str, tuple[str]]] = self.read_conll()
         self.tokenizer = tokenizer.from_pretrained(
@@ -77,42 +68,31 @@ class CoNLLDataset(Dataset):
             labels=torch.LongTensor(labels_encoded),
         )
 
-    def __repr__(self) -&gt; str:
-        return (
-            f&#34;CoNLLDataset(&#34;
-            f&#34;{self.name=}, &#34;
-            f&#34;{self.path=}, &#34;
-            f&#34;{self.model_name=}, &#34;
-            f&#34;{self.max_token_len=}, &#34;
-            f&#34;{self.tokenizer=})&#34;
-        )
-
     def read_conll(self) -&gt; list[dict[str, tuple[str]]]:
-        with open(self.path, &#34;r&#34;) as conll_file:  # type: ignore
-            data: list[dict[str, tuple[str]]] = []
+        data: list[dict[str, tuple[str]]] = []
+
+        with open(self.path, &#34;r&#34;) as conll_file:
             for divider, lines in itertools.groupby(
-                conll_file, lambda x: x.startswith(&#34;-DOCSTART-&#34;)
+                conll_file, lambda x: x.strip() == &#34;&#34;
             ):
                 if divider:
                     continue
                 fields = [line.strip().split() for line in lines]
-                fields = [line for line in fields if line]
+                # fields = [line.strip().split(&#34;\t&#34;) for line in lines]
                 fields = [line for line in zip(*fields)]
-                tokens, _, _, tags = fields
-                sequence = {&#34;tokens&#34;: tokens, &#34;tags&#34;: iob_to_biluo(tags)}
+                tokens, ner_tags = fields
+                ner_tags = [&#34;O&#34; if tag[-3:] == &#34;NOM&#34; else tag for tag in ner_tags]
+                # ner_tags = iob_to_biluo(
+                #     [&#34;O&#34; if tag[2:] != &#34;location&#34; else tag for tag in ner_tags]
+                # )
+                # if all(i == &#34;O&#34; for i in ner_tags):
+                #     continue
+                ner_tags = [tag[:-4] if tag != &#34;O&#34; else tag for tag in ner_tags]
+
+                assert len(ner_tags) == len(tokens)
+                sequence = {&#34;tokens&#34;: tokens, &#34;tags&#34;: ner_tags}
                 data.append(sequence)
-        return data
-
-
-@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;default&#34;)
-def main(cfg: omegaconf.DictConfig):
-    dataset: CoNLLDataset = hydra.utils.instantiate(  # type: ignore
-        cfg.data.datamodule.datasets.train, _recursive_=False
-    )
-
-
-if __name__ == &#34;__main__&#34;:
-    main()</code></pre>
+        return data</code></pre>
 </details>
 </section>
 <section>
@@ -120,32 +100,13 @@ if __name__ == &#34;__main__&#34;:
 <section>
 </section>
 <section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="src.pl_data.conll_dataset.main"><code class="name flex">
-<span>def <span class="ident">main</span></span>(<span>cfg: omegaconf.dictconfig.DictConfig)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@hydra.main(config_path=str(PROJECT_ROOT / &#34;conf&#34;), config_name=&#34;default&#34;)
-def main(cfg: omegaconf.DictConfig):
-    dataset: CoNLLDataset = hydra.utils.instantiate(  # type: ignore
-        cfg.data.datamodule.datasets.train, _recursive_=False
-    )</code></pre>
-</details>
-</dd>
-</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="src.pl_data.conll_dataset.CoNLLDataset"><code class="flex name class">
+<dt id="pl_data.conll_dataset.CoNLLDataset"><code class="flex name class">
 <span>class <span class="ident">CoNLLDataset</span></span>
-<span>(</span><span>name: omegaconf.nodes.ValueNode, path: omegaconf.nodes.ValueNode, model_name: omegaconf.nodes.ValueNode, max_token_len: omegaconf.nodes.ValueNode, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
+<span>(</span><span>path: pathlib.Path, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>An abstract class representing a :class:<code>Dataset</code>.</p>
@@ -169,17 +130,13 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 <pre><code class="python">class CoNLLDataset(Dataset):
     def __init__(
         self,
-        name: ValueNode,
-        path: ValueNode,
-        model_name: ValueNode,
-        max_token_len: ValueNode,
+        path: Path,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
         self.path = path
-        self.name = name
-        self.model_name = model_name
-        self.max_token_len = int(max_token_len)  # type: ignore
+        self.model_name = Const.MODEL_NAME
+        self.max_token_len = Const.MAX_TOKEN_LEN
 
         self.data: list[dict[str, tuple[str]]] = self.read_conll()
         self.tokenizer = tokenizer.from_pretrained(
@@ -203,29 +160,29 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
             labels=torch.LongTensor(labels_encoded),
         )
 
-    def __repr__(self) -&gt; str:
-        return (
-            f&#34;CoNLLDataset(&#34;
-            f&#34;{self.name=}, &#34;
-            f&#34;{self.path=}, &#34;
-            f&#34;{self.model_name=}, &#34;
-            f&#34;{self.max_token_len=}, &#34;
-            f&#34;{self.tokenizer=})&#34;
-        )
-
     def read_conll(self) -&gt; list[dict[str, tuple[str]]]:
-        with open(self.path, &#34;r&#34;) as conll_file:  # type: ignore
-            data: list[dict[str, tuple[str]]] = []
+        data: list[dict[str, tuple[str]]] = []
+
+        with open(self.path, &#34;r&#34;) as conll_file:
             for divider, lines in itertools.groupby(
-                conll_file, lambda x: x.startswith(&#34;-DOCSTART-&#34;)
+                conll_file, lambda x: x.strip() == &#34;&#34;
             ):
                 if divider:
                     continue
                 fields = [line.strip().split() for line in lines]
-                fields = [line for line in fields if line]
+                # fields = [line.strip().split(&#34;\t&#34;) for line in lines]
                 fields = [line for line in zip(*fields)]
-                tokens, _, _, tags = fields
-                sequence = {&#34;tokens&#34;: tokens, &#34;tags&#34;: iob_to_biluo(tags)}
+                tokens, ner_tags = fields
+                ner_tags = [&#34;O&#34; if tag[-3:] == &#34;NOM&#34; else tag for tag in ner_tags]
+                # ner_tags = iob_to_biluo(
+                #     [&#34;O&#34; if tag[2:] != &#34;location&#34; else tag for tag in ner_tags]
+                # )
+                # if all(i == &#34;O&#34; for i in ner_tags):
+                #     continue
+                ner_tags = [tag[:-4] if tag != &#34;O&#34; else tag for tag in ner_tags]
+
+                assert len(ner_tags) == len(tokens)
+                sequence = {&#34;tokens&#34;: tokens, &#34;tags&#34;: ner_tags}
                 data.append(sequence)
         return data</code></pre>
 </details>
@@ -236,7 +193,7 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="src.pl_data.conll_dataset.CoNLLDataset.read_conll"><code class="name flex">
+<dt id="pl_data.conll_dataset.CoNLLDataset.read_conll"><code class="name flex">
 <span>def <span class="ident">read_conll</span></span>(<span>self) ‑> list</span>
 </code></dt>
 <dd>
@@ -246,18 +203,28 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def read_conll(self) -&gt; list[dict[str, tuple[str]]]:
-    with open(self.path, &#34;r&#34;) as conll_file:  # type: ignore
-        data: list[dict[str, tuple[str]]] = []
+    data: list[dict[str, tuple[str]]] = []
+
+    with open(self.path, &#34;r&#34;) as conll_file:
         for divider, lines in itertools.groupby(
-            conll_file, lambda x: x.startswith(&#34;-DOCSTART-&#34;)
+            conll_file, lambda x: x.strip() == &#34;&#34;
         ):
             if divider:
                 continue
             fields = [line.strip().split() for line in lines]
-            fields = [line for line in fields if line]
+            # fields = [line.strip().split(&#34;\t&#34;) for line in lines]
             fields = [line for line in zip(*fields)]
-            tokens, _, _, tags = fields
-            sequence = {&#34;tokens&#34;: tokens, &#34;tags&#34;: iob_to_biluo(tags)}
+            tokens, ner_tags = fields
+            ner_tags = [&#34;O&#34; if tag[-3:] == &#34;NOM&#34; else tag for tag in ner_tags]
+            # ner_tags = iob_to_biluo(
+            #     [&#34;O&#34; if tag[2:] != &#34;location&#34; else tag for tag in ner_tags]
+            # )
+            # if all(i == &#34;O&#34; for i in ner_tags):
+            #     continue
+            ner_tags = [tag[:-4] if tag != &#34;O&#34; else tag for tag in ner_tags]
+
+            assert len(ner_tags) == len(tokens)
+            sequence = {&#34;tokens&#34;: tokens, &#34;tags&#34;: ner_tags}
             data.append(sequence)
     return data</code></pre>
 </details>
@@ -275,20 +242,15 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="src.pl_data" href="index.html">src.pl_data</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="src.pl_data.conll_dataset.main" href="#src.pl_data.conll_dataset.main">main</a></code></li>
+<li><code><a title="pl_data" href="index.html">pl_data</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="src.pl_data.conll_dataset.CoNLLDataset" href="#src.pl_data.conll_dataset.CoNLLDataset">CoNLLDataset</a></code></h4>
+<h4><code><a title="pl_data.conll_dataset.CoNLLDataset" href="#pl_data.conll_dataset.CoNLLDataset">CoNLLDataset</a></code></h4>
 <ul class="">
-<li><code><a title="src.pl_data.conll_dataset.CoNLLDataset.read_conll" href="#src.pl_data.conll_dataset.CoNLLDataset.read_conll">read_conll</a></code></li>
+<li><code><a title="pl_data.conll_dataset.CoNLLDataset.read_conll" href="#pl_data.conll_dataset.CoNLLDataset.read_conll">read_conll</a></code></li>
 </ul>
 </li>
 </ul>
@@ -297,7 +259,7 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

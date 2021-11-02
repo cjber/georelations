@@ -1,5 +1,5 @@
 from src.pl_data.conll_dataset import CoNLLDataset
-from src.pl_data.csv_dataset import PandasDataset
+from src.pl_data.csv_dataset import RELDataset
 from src.pl_data.datamodule import DataModule
 from src.pl_modules.ger_model import GERModel
 
@@ -10,10 +10,10 @@ class TestDatasets:
         assert type(dataset) == CoNLLDataset
 
     def test_csv(self):
-            dataset: PandasDataset = 
+            dataset: RELDataset = 
                 "../tests/toy_data/train_rel.csv", _recursive_=False
             )
-            assert type(dataset) == PandasDataset
+            assert type(dataset) == RELDataset
 
 
 class TestModules:

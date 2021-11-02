@@ -2,15 +2,11 @@ import pandas as pd
 from pathlib import Path
 from src.common.utils import Const, Label, convert_examples_to_features
 from torch.utils.data import Dataset
-from transformers import AutoTokenizer  # type: ignore
+from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 
-class PandasDataset(Dataset):
-    def __init__(
-        self,
-        path: Path,
-        tokenizer=AutoTokenizer,
-    ):
+class RELDataset(Dataset):
+    def __init__(self, path: Path, tokenizer=AutoTokenizer) -> None:
         super().__init__()
         self.data: pd.DataFrame = pd.read_csv(path)
         self.data["relation"] = self.data["relation"].apply(
@@ -22,12 +18,10 @@ class PandasDataset(Dataset):
             {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
 
-        self.labels = self.data["relation"].unique()
-
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> dict:
         item = self.data.iloc[index]
         return convert_examples_to_features(
             item,

@@ -6,6 +6,8 @@
 /csv_logs
 /default
 /typings
+/renv
+renv.lock
 
 # .gitignore defaults for python and pycharm
 .idea
@@ -123,6 +125,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.direnv
 env/
 venv/
 ENV/

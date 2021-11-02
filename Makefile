@@ -1,23 +1,19 @@
 .PHONY: docs
 
 PYTHON = python3
-PWD = $(shell pwd)
-
-docker:
-
-
+# generated from import random;random.randint(1000) x 5
+SEEDS = 487 726 231 879 323
 
 env:
 	- poetry install
 
-train-%:
-## train-{model}: train full model either ger or rel
-	${PYTHON} -m src.run --config-name=${@:train-%=%}
+train:
+## train: train full model
+	${PYTHON} -m src.run
 
-dev-%:
-## dev-{model}: dev run of training
-	${PYTHON} -m src.run --config-name=${@:dev-%=%} \
-	    train.pl_trainer.fast_dev_run=True
+dev:
+## dev: dev run of training
+	${PYTHON} -m src.run --fast_dev_run=True
 
 pytest:
 ## pytest: run pytest doctest and unit tests
@@ -28,23 +24,26 @@ clean:
 ## clean: remove all experiments and cache files
 	rm -rf .pytest_cache \
 	    && find . -type d -iname '__pycache__' -exec rm -rf {} + \
-	    && rm -rf wandb/* \
-	    && rm -rf experiments/* \
-	    && rm -rf outputs/* \
-	    && rm -rf ckpt/*
+	    && rm -rf ckpts/*
 
 docs:
 ## docs: build documentation automatically
 	rm -r docs \
-	    && pdoc --html --force --output-dir docs src \
-	    && mv docs/src/* docs/ \
-	    && rm -r docs/src
+	    && pdoc --html --force --output-dir docs \
+		src/pl_data \
+		src/pl_metric \
+		src/pl_modules \
+		src/common
 
 lint:
 ## lint: lint check all source files using black and flake8
-	# --max-complexity 7: may re-add
 	black src --check --diff \
 	    && flake8 --ignore E501,W503,F841,F401 src
+
+run:
+## run: Train ger and rel model over 5 fixed seeds.
+	${PYTHON} -m src.run --model ger --seed ${SEEDS} \
+	&& ${PYTHON} -m src.run --model rel --seed ${SEEDS}
 
 help:
 ## help: This helpful list of commands

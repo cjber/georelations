@@ -1,3 +1,4 @@
+import pandas as pd
 import pytorch_lightning as pl
 from argparse import ArgumentParser
 from pathlib import Path
@@ -8,14 +9,21 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
 )
 from pytorch_lightning.loggers import CSVLogger
-from src.pl_data.csv_dataset import PandasDataset
+from src.pl_data.csv_dataset import RELDataset
 from src.pl_data.datamodule import DataModule
+from src.pl_data.wnut_dataset import WNUTDataset
+from src.pl_modules.ger_model import GERModel
 from src.pl_modules.rbert_model import RBERT
+from typing import Union
+
+DATA_DIR = Path("data")
 
 parser = ArgumentParser()
 
 parser.add_argument("--fast_dev_run", type=bool, default=False)
 parser.add_argument("--seed", nargs="+", type=int, default=[42])
+parser.add_argument("--model", type=str)
+parser.add_argument("--save_to_hub", type=str)
 
 args = parser.parse_args()
 
@@ -27,16 +35,16 @@ def build_callbacks() -> list[Callback]:
             log_momentum=False,
         ),
         EarlyStopping(
-            monitor="val_loss",
-            mode="min",
+            monitor="val_f1",
+            mode="max",
             verbose=True,
             min_delta=0.0,
             patience=3,
         ),
         ModelCheckpoint(
             filename="checkpoint",
-            monitor="val_loss",
-            mode="min",
+            monitor="val_f1",
+            mode="max",
             save_top_k=1,
             verbose=True,
         ),
@@ -44,22 +52,32 @@ def build_callbacks() -> list[Callback]:
     return callbacks
 
 
-def run(dataset, pl_model: pl.LightningModule, seed, args=args) -> None:
+def run(
+    dataset,
+    pl_model: pl.LightningModule,
+    name: str,
+    path: Union[Path, str],
+    test_path: Union[Path, str],
+    seed: int,
+    args=args,
+) -> None:
 
     seed_everything(seed, workers=True)
 
     datamodule: pl.LightningDataModule = DataModule(
         dataset=dataset,
-        path=Path("data/distant_data/relations.csv"),
+        path=path,
+        test_path=test_path,
         num_workers=8,
-        batch_size=16,
+        batch_size=2,
+        seed=seed,
     )
     model: pl.LightningModule = pl_model()
     callbacks: list[Callback] = build_callbacks()
     csv_logger = CSVLogger(
         save_dir="csv_logs",
         name="seed_" + str(seed),
-        version=0,
+        version=name,
     )
 
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
@@ -70,22 +88,64 @@ def run(dataset, pl_model: pl.LightningModule, seed, args=args) -> None:
         log_every_n_steps=10,
         callbacks=callbacks,
         gpus=-1,
+        auto_select_gpus=True,
         precision=16,
         max_epochs=35,
-        auto_select_gpus=True,
         benchmark=True,
         stochastic_weight_avg=True,
     )
 
     trainer.tune(model=model, datamodule=datamodule)
     trainer.fit(model=model)
+
+    test = trainer.test()
+
+    pd.DataFrame(test).to_csv("csv_logs/seed_" + str(seed) + "_" + name + "_test.csv")
     csv_logger.save()
+
+    if args.save_to_hub:
+        model.model.push_to_hub(f"cjber/{args.save_to_hub}")  # type: ignore
 
 
 if __name__ == "__main__":
     if len(args.seed) > 1:
         print("Running for multiple seeds.")
         for seed in args.seed:
-            run(PandasDataset, RBERT, seed=seed)
+            if args.model == "ger":
+                run(
+                    dataset=WNUTDataset,
+                    pl_model=GERModel,
+                    name="ger",
+                    path="train",
+                    test_path="test",
+                    seed=seed,
+                )
+            elif args.model == "rel":
+                run(
+                    dataset=RELDataset,
+                    pl_model=RBERT,
+                    name="rel",
+                    path=DATA_DIR / "distant_data" / "relations.csv",
+                    test_path=DATA_DIR / "distant_data" / "relations_test.csv",
+                    seed=seed,
+                )
+    elif args.model == "ger":
+        run(
+            dataset=WNUTDataset,
+            pl_model=GERModel,
+            name="ger",
+            path="train",
+            test_path="test",
+            seed=args.seed[0],
+        )
+    elif args.model == "rel":
+        run(
+            dataset=RELDataset,
+            pl_model=RBERT,
+            name="rel",
+            path=DATA_DIR / "distant_data" / "relations.csv",
+            test_path=DATA_DIR / "distant_data" / "relations_test.csv",
+            seed=args.seed[0],
+        )
     else:
-        run(PandasDataset, RBERT, seed=args.seed[0])
+        print("Use valid --model arg [ger, rel].")

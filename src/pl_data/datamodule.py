@@ -3,34 +3,40 @@ import torch
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import random_split
-from typing import Optional
+from typing import Optional, Union
 
 
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
         dataset,
-        path: Path,
+        path: Union[Path, str],
+        test_path: Union[Path, str],
         num_workers: int,
         batch_size: int,
-    ):
+        seed: int,
+    ) -> None:
         super().__init__()
         self.dataset = dataset
-        self.data_dir = path
+        self.path = path
+        self.test_path = test_path
 
         self.num_workers = num_workers
         self.batch_size = batch_size
+        self.seed = seed
 
-    def setup(self, stage: Optional[str]):
+    def setup(self, stage: Optional[str]) -> None:
         if stage == "fit" or stage is None:
-            csv_data = self.dataset(self.data_dir)
-            data_len = len(csv_data)
+            data = self.dataset(self.path)
+            data_len = len(data)
             val_len = data_len // 10
             self.train_dataset, self.val_dataset = random_split(
-                csv_data,
+                data,
                 [data_len - val_len, val_len],
-                generator=torch.Generator().manual_seed(42),
+                generator=torch.Generator().manual_seed(self.seed),
             )
+        if stage == "test" or stage is None:
+            self.test_dataset = self.dataset(self.test_path)
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
@@ -48,10 +54,19 @@ class DataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
         )
 
+    def test_dataloader(self) -> DataLoader:
+        return DataLoader(
+            self.test_dataset,
+            shuffle=False,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
-            f"{self.data_dir=}, "
+            f"{self.path=}, "
+            f"{self.test_path=}, "
             f"{self.num_workers=}, "
             f"{self.batch_size=})"
         )

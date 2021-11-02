@@ -1,22 +1,23 @@
 import itertools
-
 import pytorch_lightning as pl
-from transformers.models.auto.tokenization_auto import AutoTokenizer
-
-from torch.utils.data.dataloader import DataLoader
-from src.common.model_utils import (
+import torch
+from src.common.utils import (
     Const,
     Label,
     convert_examples_to_features,
     ents_to_relations,
 )
+from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 
 class RelationEnsemble(pl.LightningModule):
     def __init__(
-        self, ger_model, rel_model, tokenizer=AutoTokenizer, *args, **kwargs
+        self,
+        ger_model: pl.LightningModule,
+        rel_model: pl.LightningModule,
+        tokenizer=AutoTokenizer,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.ger_model = ger_model
         self.rel_model = rel_model
@@ -26,36 +27,46 @@ class RelationEnsemble(pl.LightningModule):
             {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
 
-    def forward(self, input_ids, attention_mask, labels=None):
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        labels=None,
+    ) -> list[tuple]:
         ger_out: dict = self.ger_model(
             input_ids=input_ids, attention_mask=attention_mask, labels=labels
         )
-        sequence_list = [
+
+        sequence: list = [
             ents_to_relations(item["tokens"], item["tags"]) for item in ger_out
         ]
-        sequence_list = list(
-            itertools.chain.from_iterable([s for s in sequence_list if s])
-        )
+        sequence = list(itertools.chain.from_iterable([s for s in sequence if s]))
 
-        if sequence_list:
-            features = [
-                convert_examples_to_features(
+        output = []
+        if sequence:
+            for item in sequence:
+                if any(
+                    x not in item for x in ["<head>", "</head>", "<tail>", "</tail>"]
+                ):
+                    continue
+                features = convert_examples_to_features(
                     item,
                     max_seq_len=Const.MAX_TOKEN_LEN,
                     tokenizer=self.tokenizer,
                     labels=False,
                 )
-                for item in sequence_list
-            ]
 
-            breakpoint()
-            for item in features:
-                rel_out = self.rel_model(**item)
-                breakpoint()
-                return (
-                    sequence_list,
-                    [
-                        Label("REL").labels[rel]
-                        for rel in rel_out[0].argmax(dim=1).tolist()
-                    ],
+                # truncation may remove tail/head so ignore
+
+                rel_out = self.rel_model(
+                    features["input_ids"].unsqueeze(0).to("cuda"),
+                    features["attention_mask"].unsqueeze(0).to("cuda"),
+                    features["labels"],
+                    features["e1_mask"].unsqueeze(0).to("cuda"),
+                    features["e2_mask"].unsqueeze(0).to("cuda"),
                 )
+
+                output.append(
+                    (item, Label("REL").idx[rel_out[0].argmax(dim=1)[0].tolist()])
+                )
+        return output

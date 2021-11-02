@@ -1,5 +1,7 @@
 import itertools
 import torch
+from pathlib import Path
+from spacy.training.iob_utils import iob_to_biluo
 from src.common.utils import Const, Label, encode_labels
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
@@ -8,13 +10,11 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 class CoNLLDataset(Dataset):
     def __init__(
         self,
-        name: ValueNode,
-        path: ValueNode,
+        path: Path,
         tokenizer=AutoTokenizer,
     ):
         super().__init__()
         self.path = path
-        self.name = name
         self.model_name = Const.MODEL_NAME
         self.max_token_len = Const.MAX_TOKEN_LEN
 
@@ -40,28 +40,8 @@ class CoNLLDataset(Dataset):
             labels=torch.LongTensor(labels_encoded),
         )
 
-    def __repr__(self) -> str:
-        return (
-            f"CoNLLDataset("
-            f"{self.name=}, "
-            f"{self.path=}, "
-            f"{self.model_name=}, "
-            f"{self.max_token_len=}, "
-            f"{self.tokenizer=})"
-        )
-
     def read_conll(self) -> list[dict[str, tuple[str]]]:
         data: list[dict[str, tuple[str]]] = []
-        # with open(self.path, "r") as conll_file:  # type: ignore
-        # for divider, lines in itertools.groupby(
-        #     conll_file, lambda x: x.startswith("-DOCSTART-")
-        # ):
-        #     if divider:
-        #         continue
-        #     fields = [line.strip().split() for line in lines]
-        #     fields = [line for line in fields if line]
-        #     fields = [line for line in zip(*fields)]
-        #     tokens, _, _, tags = fields
 
         with open(self.path, "r") as conll_file:
             for divider, lines in itertools.groupby(
@@ -70,22 +50,18 @@ class CoNLLDataset(Dataset):
                 if divider:
                     continue
                 fields = [line.strip().split() for line in lines]
+                # fields = [line.strip().split("\t") for line in lines]
                 fields = [line for line in zip(*fields)]
                 tokens, ner_tags = fields
                 ner_tags = ["O" if tag[-3:] == "NOM" else tag for tag in ner_tags]
+                # ner_tags = iob_to_biluo(
+                #     ["O" if tag[2:] != "location" else tag for tag in ner_tags]
+                # )
+                # if all(i == "O" for i in ner_tags):
+                #     continue
                 ner_tags = [tag[:-4] if tag != "O" else tag for tag in ner_tags]
 
+                assert len(ner_tags) == len(tokens)
                 sequence = {"tokens": tokens, "tags": ner_tags}
                 data.append(sequence)
         return data
-
-
-@hydra.main(config_path=str(PROJECT_ROOT / "conf"), config_name="ger")
-def main(cfg: omegaconf.DictConfig):
-    dataset: CoNLLDataset = hydra.utils.instantiate(
-        cfg.data.datamodule.datasets.train, _recursive_=False
-    )
-
-
-if __name__ == "__main__":
-    main()

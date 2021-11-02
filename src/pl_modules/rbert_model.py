@@ -1,23 +1,31 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-from src.common.utils import Const, Label
-from torch.optim import AdamW, Optimizer
+from src.common.utils import Const, Label, tdict
+from torch import Tensor
+from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics.functional import f1
-from transformers import AutoModel  # type: ignore
-from typing import Any, Union
+from transformers.models.auto.modeling_auto import AutoModel
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+from typing import Any
 
 
 class FCLayer(nn.Module):
-    def __init__(self, input_dim, output_dim, dropout_rate=0.0, use_activation=True):
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        dropout_rate: float = 0.0,
+        use_activation: bool = True,
+    ) -> None:
         super(FCLayer, self).__init__()
         self.use_activation = use_activation
         self.dropout = nn.Dropout(dropout_rate)
         self.linear = nn.Linear(input_dim, output_dim)
         self.tanh = nn.Tanh()
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x = self.dropout(x)
         if self.use_activation:
             x = self.tanh(x)
@@ -34,8 +42,14 @@ class RBERT(pl.LightningModule):
             Const.MODEL_NAME,
             num_labels=Label("REL").count,
             return_dict=True,
-            output_attentions=False,
         )
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            Const.MODEL_NAME, add_prefix_space=True
+        )
+        self.tokenizer.add_special_tokens(
+            {"additional_special_tokens": Const.SPECIAL_TOKENS}
+        )
+        self.model.resize_token_embeddings(len(self.tokenizer))
 
         hidden_size = self.model.config.hidden_size
         dropout = (
@@ -53,7 +67,10 @@ class RBERT(pl.LightningModule):
         )
 
     @staticmethod
-    def entity_average(hidden_output, e_mask):
+    def entity_average(
+        hidden_output: Tensor,
+        e_mask: Tensor,
+    ) -> Tensor:
         """
         Average the entity hidden state vectors (H_i ~ H_j)
         :param hidden_output: [batch_size, j-i+1, dim]
@@ -68,16 +85,21 @@ class RBERT(pl.LightningModule):
         sum_vector = torch.bmm(e_mask_unsqueeze.float(), hidden_output).squeeze(1)
         return sum_vector.float() / length_tensor.float()
 
-    def forward(self, input_ids, attention_mask, labels, e1_mask, e2_mask):
-        outputs = self.model(
-            input_ids=input_ids, attention_mask=attention_mask
-        )  # sequence_output, (hidden_states), (attentions)
-        sequence_output = outputs[0]
-        pooled_output = outputs[0][:, 0]  # [CLS]
+    def forward(
+        self,
+        input_ids: Tensor,
+        attention_mask: Tensor,
+        labels: Tensor,
+        e1_mask: Tensor,
+        e2_mask: Tensor,
+    ) -> tdict:
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        hidden_state = outputs[0]  # (bs, seq_len, dim)
+        pooled_output = hidden_state[:, 0]  # [CLS] token (bs, dim)
 
         # Average
-        e1_h = self.entity_average(sequence_output, e1_mask)
-        e2_h = self.entity_average(sequence_output, e2_mask)
+        e1_h = self.entity_average(hidden_state, e1_mask)
+        e2_h = self.entity_average(hidden_state, e2_mask)
 
         # Dropout -> tanh -> fc_layer (Share FC layer for e1 and e2)
         pooled_output = self.cls_fc_layer(pooled_output)
@@ -100,48 +122,59 @@ class RBERT(pl.LightningModule):
 
         # Softmax
         if labels is not None:
-            if Label("REL").count == 1:
-                loss_fct = nn.MSELoss()
-                loss = loss_fct(logits.view(-1), labels.view(-1))
-            else:
-                loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, Label("REL").count), labels.view(-1))
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, Label("REL").count), labels.view(-1))
 
             outputs = (loss,) + outputs
         return outputs  # (loss), logits, (hidden_states), (attentions)
 
-    def step(self, batch: Any, batch_idx: int) -> dict:
+    def step(self, batch: tdict, _: int) -> tdict:
         outputs = self(**batch)
         loss, logits = outputs[:2]
         softmax = nn.Softmax(dim=1)
         probs = softmax(logits)
-        return {
-            "probs": probs,
-            "logits": logits,
-            "loss": loss,
-        }
+        return {"probs": probs, "logits": logits, "loss": loss}
 
-    def training_step(self, batch: Any, batch_idx: int) -> dict:
+    def training_step(self, batch: tdict, batch_idx: int) -> Tensor:
         step_out = self.step(batch, batch_idx)
+        loss = step_out["loss"]
         train_f1 = f1(
             step_out["probs"],
             batch["labels"],
             num_classes=Label("REL").count,
         )
+        self.log_dict(
+            {"train_loss": loss, "train_f1": train_f1},
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+        )
+        return loss
 
-        self.log("train_loss", step_out["loss"])
-        self.log("train_f1", train_f1)
-        return {"loss": step_out["loss"], "train_accuracy": train_f1}
-
-    def validation_step(self, batch: Any, batch_idx: int) -> dict:
+    def validation_step(self, batch: tdict, batch_idx: int) -> Tensor:
         step_out = self.step(batch, batch_idx)
-        val_f1 = f1(step_out["probs"], batch["labels"], num_classes=Label("REL").count)
+        loss = step_out["loss"]
+        val_f1 = f1(
+            step_out["probs"],
+            batch["labels"],
+            num_classes=Label("REL").count,
+        )
+        self.log_dict(
+            {"val_loss": loss, "val_f1": val_f1},
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+        )
+        return loss
 
-        self.log("val_loss", step_out["loss"])
-        self.log("val_f1", val_f1, prog_bar=True)
-        return {"val_loss": step_out["loss"], "val_accuracy": val_f1}
+    def test_step(self, batch: tdict, batch_idx: int) -> Tensor:
+        step_out = self.step(batch, batch_idx)
+        loss = step_out["loss"]
+        test_f1 = f1(step_out["probs"], batch["labels"], num_classes=Label("REL").count)
+        self.log_dict({"test_loss": loss, "test_f1": test_f1})
+        return loss
 
-    def configure_optimizers(self) -> Union[Optimizer, dict]:
+    def configure_optimizers(self) -> dict[str, Any]:
         param_optimizer = list(self.model.named_parameters())
         no_decay = ["bias", "gamma", "beta"]
         optimizer_grouped_parameters = [
