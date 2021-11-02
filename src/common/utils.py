@@ -113,7 +113,7 @@ def encode_labels(
     >>> tokenizer = AutoTokenizer.from_pretrained(
     ...     'distilbert-base-cased', add_prefix_space=True
     ... )
-    >>> encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
+    >>> encoding, labels_encoded = encode_labels(tokens, labels, tokenizer, 32)
 
     >>> len(encoding['input_ids'].flatten()) == len(labels_encoded)
     True

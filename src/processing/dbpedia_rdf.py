@@ -64,7 +64,7 @@ for file in tqdm(Path("data/dbpedia_abs").iterdir()):
                                 print(f"Adding {name} as place!: {begin_idx, end_idx}")
                             except ValueError:
                                 print(f"{name} not found in text!")
-                except:
+                except Exception:
                     print(f"Error finding context: {entry}!")
             else:
                 entry = [line.strip().split() for line in lines[1:]]

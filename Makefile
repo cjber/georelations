@@ -17,8 +17,7 @@ dev:
 
 pytest:
 ## pytest: run pytest doctest and unit tests
-	pytest --doctest-modules src/common \
-	    && pytest
+	poetry run python -m pytest --doctest-modules src/common
 
 clean:
 ## clean: remove all experiments and cache files
@@ -38,7 +37,7 @@ docs:
 lint:
 ## lint: lint check all source files using black and flake8
 	black src --check --diff \
-	    && flake8 --ignore E501,W503,F841,F401 src
+	    && flake8 --ignore E203,E501,W503,F841,F401 src
 
 run:
 ## run: Train ger and rel model over 5 fixed seeds.

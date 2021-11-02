@@ -60,8 +60,7 @@ def run(
     test_path: Union[Path, str],
     seed: int,
     args=args,
-) -> None:
-
+) -> None:  # sourcery skip: boolean-if-exp-identity
     seed_everything(seed, workers=True)
 
     datamodule: pl.LightningDataModule = DataModule(
@@ -80,6 +79,10 @@ def run(
         version=name,
     )
 
+    gpus = None if args.fast_dev_run else -1
+    auto_select_gpus = False if args.fast_dev_run else True
+    precision = 64 if args.fast_dev_run else 16
+
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         args,
         deterministic=True,  # ensure reproducible results
@@ -87,9 +90,9 @@ def run(
         logger=[csv_logger],
         log_every_n_steps=10,
         callbacks=callbacks,
-        gpus=-1,
-        auto_select_gpus=True,
-        precision=16,
+        gpus=gpus,
+        auto_select_gpus=auto_select_gpus,
+        precision=precision,
         max_epochs=35,
         benchmark=True,
         stochastic_weight_avg=True,
@@ -98,10 +101,12 @@ def run(
     trainer.tune(model=model, datamodule=datamodule)
     trainer.fit(model=model)
 
-    test = trainer.test()
-
-    pd.DataFrame(test).to_csv("csv_logs/seed_" + str(seed) + "_" + name + "_test.csv")
-    csv_logger.save()
+    if not args.fast_dev_run:
+        test = trainer.test()
+        pd.DataFrame(test).to_csv(
+            "csv_logs/seed_" + str(seed) + "_" + name + "_test.csv"
+        )
+        csv_logger.save()
 
     if args.save_to_hub:
         model.model.push_to_hub(f"cjber/{args.save_to_hub}")  # type: ignore

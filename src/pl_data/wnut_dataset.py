@@ -33,7 +33,9 @@ class WNUTDataset(Dataset[dict[str, torch.Tensor]]):
         tokenizer: PreTrainedTokenizer = AutoTokenizer,  # type: ignore
     ) -> None:
         super().__init__()
-        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME, add_prefix_space=True)
+        self.tokenizer = tokenizer.from_pretrained(
+            Const.MODEL_NAME, add_prefix_space=True
+        )
         self.tokenizer.add_special_tokens(
             {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
