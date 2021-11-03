@@ -7,12 +7,12 @@ on:
     branches:
       - main
 jobs:
-  ci:
+  make-pytest:
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
-        poetry-version: [1.0, 1.1.11]
+        poetry-version: [1.0, 1.1.11, 1.2.0a2]
         os: [ubuntu-18.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -29,4 +29,3 @@ jobs:
       - name: Run tests
         run: |
           make pytest
-          coverage report
