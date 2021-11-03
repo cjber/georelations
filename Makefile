@@ -17,7 +17,7 @@ dev:
 
 pytest:
 ## pytest: run pytest doctest and unit tests
-	poetry run coverage run -m pytest --doctest-modules src/common
+	poetry run python -m coverage run -m pytest --doctest-modules src/common
 
 clean:
 ## clean: remove all experiments and cache files
@@ -28,7 +28,7 @@ clean:
 docs:
 ## docs: build documentation automatically
 	rm -r docs \
-	    && poetry run pdoc --html --force --output-dir docs \
+	    && poetry run python -m pdoc --html --force --output-dir docs \
 		src/pl_data \
 		src/pl_metric \
 		src/pl_modules \
@@ -36,7 +36,7 @@ docs:
 
 lint:
 ## lint: lint check all source files using black and flake8
-	poetry run black src --check --diff \
+	poetry run python -m black src --check --diff \
 	    && poetry run flake8 --ignore E203,E501,W503,F841,F401 src
 
 run:
