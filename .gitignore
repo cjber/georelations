@@ -1,21 +1,16 @@
-/data
-/paper
-/wandb
-/experiments
-/ckpts
-/csv_logs
-/default
-/typings
-/renv
-/tests
+data
+paper
+ckpts
+csv_logs
+typings
+renv
+tests
+
 renv.lock
 
-# .gitignore defaults for python and pycharm
-.idea
-.mount
 .envrc
 .direnv
-commands.md
+.old
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -228,4 +223,3 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
-src/processing/dbpedia_rdf.py

@@ -104,7 +104,10 @@ pathspec = ">=0.9.0,<1"
 platformdirs = ">=2"
 regex = ">=2020.1.8"
 tomli = ">=0.2.6,<2.0.0"
-typing-extensions = ">=3.10.0.0"
+typing-extensions = [
+    {version = ">=3.10.0.0", markers = "python_version < \"3.10\""},
+    {version = "!=3.10.0.1", markers = "python_version >= \"3.10\""},
+]
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -207,7 +210,7 @@ dev = ["black", "flake8", "flake8-pyi", "matplotlib", "mypy (==0.770)", "numpy",
 
 [[package]]
 name = "datasets"
-version = "1.14.0"
+version = "1.15.1"
 description = "HuggingFace community-driven open-source library of datasets"
 category = "main"
 optional = false
@@ -217,7 +220,7 @@ python-versions = "*"
 aiohttp = "*"
 dill = "*"
 fsspec = {version = ">=2021.05.0", extras = ["http"]}
-huggingface-hub = ">=0.0.19,<0.1.0"
+huggingface-hub = ">=0.1.0,<1.0.0"
 multiprocess = "*"
 numpy = ">=1.17"
 packaging = "*"
@@ -231,13 +234,13 @@ xxhash = "*"
 apache-beam = ["apache-beam (>=2.26.0)"]
 audio = ["librosa"]
 benchmarks = ["numpy (==1.18.5)", "tensorflow (==2.3.0)", "torch (==1.6.0)", "transformers (==3.0.2)"]
-dev = ["absl-py", "pytest", "pytest-datadir", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore", "boto3", "botocore", "fsspec", "moto[server,s3] (==2.0.4)", "rarfile (>=4.0)", "s3fs (==2021.08.1)", "tensorflow (>=2.3)", "torch", "torchaudio", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "scikit-learn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "six (>=1.15.0,<1.16.0)", "black (==21.4b0)", "flake8 (==3.7.9)", "isort", "pyyaml (>=5.3.1)", "importlib-resources"]
+dev = ["absl-py", "pytest", "pytest-datadir", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore", "boto3", "botocore", "faiss-cpu (>=1.6.4)", "fsspec", "moto[s3,server] (==2.0.4)", "rarfile (>=4.0)", "s3fs (==2021.08.1)", "tensorflow (>=2.3)", "torch", "torchaudio", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "scikit-learn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "six (>=1.15.0,<1.16.0)", "wget (>=3.2)", "pytorch-nlp (==0.5.0)", "pytorch-lightning", "fastBPE (==0.1.0)", "fairseq", "black (==21.4b0)", "flake8 (==3.7.9)", "isort", "pyyaml (>=5.3.1)", "importlib-resources"]
 docs = ["docutils (==0.16.0)", "recommonmark", "sphinx (==3.1.2)", "sphinx-markdown-tables", "sphinx-rtd-theme (==0.4.3)", "sphinxext-opengraph (==0.4.1)", "sphinx-copybutton", "fsspec (<2021.9.0)", "s3fs", "sphinx-panels", "sphinx-inline-tabs", "myst-parser"]
 quality = ["black (==21.4b0)", "flake8 (==3.7.9)", "isort", "pyyaml (>=5.3.1)"]
 s3 = ["fsspec", "boto3", "botocore", "s3fs"]
 tensorflow = ["tensorflow (>=2.2.0)"]
 tensorflow_gpu = ["tensorflow-gpu (>=2.2.0)"]
-tests = ["absl-py", "pytest", "pytest-datadir", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore", "boto3", "botocore", "fsspec", "moto[server,s3] (==2.0.4)", "rarfile (>=4.0)", "s3fs (==2021.08.1)", "tensorflow (>=2.3)", "torch", "torchaudio", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "scikit-learn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "six (>=1.15.0,<1.16.0)", "importlib-resources"]
+tests = ["absl-py", "pytest", "pytest-datadir", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore", "boto3", "botocore", "faiss-cpu (>=1.6.4)", "fsspec", "moto[s3,server] (==2.0.4)", "rarfile (>=4.0)", "s3fs (==2021.08.1)", "tensorflow (>=2.3)", "torch", "torchaudio", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "scikit-learn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "six (>=1.15.0,<1.16.0)", "wget (>=3.2)", "pytorch-nlp (==0.5.0)", "pytorch-lightning", "fastBPE (==0.1.0)", "fairseq", "importlib-resources"]
 torch = ["torch"]
 
 [[package]]
@@ -250,7 +253,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "deepspeed"
-version = "0.5.4"
+version = "0.5.5"
 description = "DeepSpeed library"
 category = "main"
 optional = false
@@ -268,9 +271,9 @@ triton = "*"
 
 [package.extras]
 1bit_adam = ["mpi4py"]
-all = ["sphinx", "recommonmark", "importlib-metadata (>=4)", "megatron-lm (==1.1.5)", "pytest", "pre-commit", "clang-format", "psutil", "tqdm", "pytest-forked", "sphinx-rtd-theme", "mpi4py", "pytest-randomly"]
-dev = ["pytest", "pytest-forked", "pytest-randomly", "pre-commit", "clang-format", "sphinx", "recommonmark", "sphinx-rtd-theme", "megatron-lm (==1.1.5)", "importlib-metadata (>=4)"]
-readthedocs = ["tqdm", "psutil"]
+all = ["docutils (<0.18)", "pytest", "pre-commit", "pytest-randomly", "tqdm", "clang-format", "sphinx-rtd-theme", "megatron-lm (==1.1.5)", "importlib-metadata (>=4)", "mpi4py", "recommonmark", "psutil", "pytest-forked", "sphinx"]
+dev = ["pytest", "pytest-forked", "pytest-randomly", "pre-commit", "clang-format", "sphinx", "recommonmark", "sphinx-rtd-theme", "megatron-lm (==1.1.5)", "importlib-metadata (>=4)", "docutils (<0.18)"]
+readthedocs = ["tqdm", "psutil", "docutils (<0.18)"]
 
 [[package]]
 name = "dill"
@@ -460,7 +463,7 @@ protobuf = ["grpcio-tools (>=1.41.1)"]
 
 [[package]]
 name = "huggingface-hub"
-version = "0.0.19"
+version = "0.1.0"
 description = "Client library to download and publish models on the huggingface.co hub"
 category = "main"
 optional = false
@@ -547,7 +550,7 @@ test = ["nose (>=0.10.1)", "requests", "testpath", "pygments", "nbformat", "ipyk
 
 [[package]]
 name = "isort"
-version = "5.9.3"
+version = "5.10.0"
 description = "A Python utility / library to sort Python imports."
 category = "main"
 optional = false
@@ -840,6 +843,7 @@ numpy = [
     {version = ">=1.17.3", markers = "platform_machine != \"aarch64\" and platform_machine != \"arm64\" and python_version < \"3.10\""},
     {version = ">=1.19.2", markers = "platform_machine == \"aarch64\" and python_version < \"3.10\""},
     {version = ">=1.20.0", markers = "platform_machine == \"arm64\" and python_version < \"3.10\""},
+    {version = ">=1.21.0", markers = "python_version >= \"3.10\""},
 ]
 python-dateutil = ">=2.7.3"
 pytz = ">=2017.3"
@@ -1183,7 +1187,7 @@ six = ">=1.5"
 
 [[package]]
 name = "pytorch-lightning"
-version = "1.4.9"
+version = "1.5.0"
 description = "PyTorch Lightning is the lightweight PyTorch wrapper for ML researchers. Scale your models. Write less boilerplate."
 category = "main"
 optional = false
@@ -1198,19 +1202,19 @@ pyDeprecate = "0.3.1"
 PyYAML = ">=5.1"
 tensorboard = ">=2.2.0"
 torch = ">=1.6"
-torchmetrics = ">=0.4.0"
+torchmetrics = ">=0.4.1"
 tqdm = ">=4.41.0"
 typing-extensions = "*"
 
 [package.extras]
-all = ["matplotlib (>3.1)", "horovod (>=0.21.2)", "omegaconf (>=2.0.1)", "torchtext (>=0.7)", "onnx (>=1.7.0)", "onnxruntime (>=1.3.0)", "hydra-core (>=1.0)", "jsonargparse[signatures] (>=3.17.0)", "gcsfs (>=2021.5.0)", "neptune-client (>=0.4.109)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)", "coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "scikit-image (>0.17.1)", "nltk (>=3.3)", "pandas", "torchvision (>=0.7)", "gym (>=0.17.0)", "ipython"]
-cpu = ["matplotlib (>3.1)", "omegaconf (>=2.0.1)", "torchtext (>=0.7)", "onnx (>=1.7.0)", "onnxruntime (>=1.3.0)", "hydra-core (>=1.0)", "jsonargparse[signatures] (>=3.17.0)", "gcsfs (>=2021.5.0)", "neptune-client (>=0.4.109)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)", "coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "scikit-image (>0.17.1)", "nltk (>=3.3)", "pandas", "torchvision (>=0.7)", "gym (>=0.17.0)", "ipython"]
-cpu-extra = ["matplotlib (>3.1)", "omegaconf (>=2.0.1)", "torchtext (>=0.7)", "onnx (>=1.7.0)", "onnxruntime (>=1.3.0)", "hydra-core (>=1.0)", "jsonargparse[signatures] (>=3.17.0)", "gcsfs (>=2021.5.0)"]
-dev = ["matplotlib (>3.1)", "horovod (>=0.21.2)", "omegaconf (>=2.0.1)", "torchtext (>=0.7)", "onnx (>=1.7.0)", "onnxruntime (>=1.3.0)", "hydra-core (>=1.0)", "jsonargparse[signatures] (>=3.17.0)", "gcsfs (>=2021.5.0)", "neptune-client (>=0.4.109)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)", "coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "scikit-image (>0.17.1)", "nltk (>=3.3)", "pandas"]
+all = ["matplotlib (>3.1)", "horovod (>=0.21.2)", "torchtext (>=0.7)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=3.19.3)", "gcsfs (>=2021.5.0)", "rich (>=10.2.2)", "neptune-client (>=0.10.0)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)", "coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "pytest-rerunfailures (>=10.2)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "flake8 (>=3.9.2)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnxruntime", "pandas", "torchvision (>=0.7)", "gym (>=0.17.0)", "ipython"]
+cpu = ["matplotlib (>3.1)", "torchtext (>=0.7)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=3.19.3)", "gcsfs (>=2021.5.0)", "rich (>=10.2.2)", "neptune-client (>=0.10.0)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)", "coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "pytest-rerunfailures (>=10.2)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "flake8 (>=3.9.2)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnxruntime", "pandas", "torchvision (>=0.7)", "gym (>=0.17.0)", "ipython"]
+cpu-extra = ["matplotlib (>3.1)", "torchtext (>=0.7)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=3.19.3)", "gcsfs (>=2021.5.0)", "rich (>=10.2.2)"]
+dev = ["matplotlib (>3.1)", "horovod (>=0.21.2)", "torchtext (>=0.7)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=3.19.3)", "gcsfs (>=2021.5.0)", "rich (>=10.2.2)", "neptune-client (>=0.10.0)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)", "coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "pytest-rerunfailures (>=10.2)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "flake8 (>=3.9.2)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnxruntime", "pandas"]
 examples = ["torchvision (>=0.7)", "gym (>=0.17.0)", "ipython"]
-extra = ["matplotlib (>3.1)", "horovod (>=0.21.2)", "omegaconf (>=2.0.1)", "torchtext (>=0.7)", "onnx (>=1.7.0)", "onnxruntime (>=1.3.0)", "hydra-core (>=1.0)", "jsonargparse[signatures] (>=3.17.0)", "gcsfs (>=2021.5.0)"]
-loggers = ["neptune-client (>=0.4.109)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)"]
-test = ["coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "scikit-image (>0.17.1)", "nltk (>=3.3)", "pandas"]
+extra = ["matplotlib (>3.1)", "horovod (>=0.21.2)", "torchtext (>=0.7)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=3.19.3)", "gcsfs (>=2021.5.0)", "rich (>=10.2.2)"]
+loggers = ["neptune-client (>=0.10.0)", "comet-ml (>=3.1.12)", "mlflow (>=1.0.0)", "test-tube (>=0.7.5)", "wandb (>=0.8.21)"]
+test = ["coverage (>5.2.0)", "codecov (>=2.1)", "pytest (>=6.0)", "pytest-rerunfailures (>=10.2)", "check-manifest", "twine (==3.2)", "mypy (>=0.900)", "flake8 (>=3.9.2)", "pre-commit (>=1.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnxruntime", "pandas"]
 
 [[package]]
 name = "pytz"
@@ -1599,7 +1603,7 @@ typing-extensions = "*"
 
 [[package]]
 name = "torchmetrics"
-version = "0.5.1"
+version = "0.6.0"
 description = "PyTorch native Metrics"
 category = "main"
 optional = false
@@ -1611,9 +1615,14 @@ packaging = "*"
 torch = ">=1.3.1"
 
 [package.extras]
-all = ["scipy", "torchvision", "torch-fidelity", "nltk (>=3.6)", "tqdm (>=4.41.0)"]
-image = ["scipy", "torchvision", "torch-fidelity"]
-text = ["nltk (>=3.6)", "tqdm (>=4.41.0)"]
+all = ["numpy (>=1.17.2)", "packaging", "pystoi", "pesq (>=0.0.3)", "torch (>=1.3.1)", "torchvision", "pycocotools (>=2.0.2)", "nbsphinx (>=0.8)", "sphinx (>=4.0)", "sphinx-togglebutton (>=0.2)", "sphinx-autodoc-typehints (>=1.0)", "sphinxcontrib-mockautodoc", "sphinx-copybutton (>=0.3)", "pytorch-lightning (>=1.1)", "pandoc (>=1.0)", "sphinx-paramlinks (>=0.5.1)", "docutils (>=0.16)", "sphinxcontrib-fulltoc (>=1.0)", "myst-parser", "scipy", "lpips", "torch-fidelity", "pytorch-lightning (>=1.0)", "phmdoctest (>=1.1.1)", "pytest (>=6.0)", "cloudpickle (>=1.3)", "twine (>=3.2)", "codecov (>=2.1)", "sacrebleu (>=2.0.0)", "scikit-image (>0.17.1)", "mir-eval (>=0.6)", "isort (>=5.0)", "scikit-learn (>=0.24)", "mypy (>=0.790)", "jiwer (>=2.2.0)", "check-manifest", "flake8", "transformers (>=4.0)", "bert-score (==0.3.10)", "rouge-score (>=0.0.4)", "coverage (>5.2)", "pre-commit (>=1.0)", "pytest-cov (>2.10)", "pypesq", "tqdm (>=4.41.0)", "regex (>=2021.9.24)", "nltk (>=3.6)"]
+audio = ["numpy (>=1.17.2)", "packaging", "pystoi", "pesq (>=0.0.3)", "torch (>=1.3.1)"]
+detection = ["numpy (>=1.17.2)", "packaging", "torchvision", "pycocotools (>=2.0.2)", "torch (>=1.3.1)"]
+docs = ["numpy (>=1.17.2)", "packaging", "nbsphinx (>=0.8)", "sphinx (>=4.0)", "sphinx-togglebutton (>=0.2)", "sphinx-autodoc-typehints (>=1.0)", "sphinxcontrib-mockautodoc", "sphinx-copybutton (>=0.3)", "pytorch-lightning (>=1.1)", "pandoc (>=1.0)", "sphinx-paramlinks (>=0.5.1)", "docutils (>=0.16)", "sphinxcontrib-fulltoc (>=1.0)", "torch (>=1.3.1)", "myst-parser"]
+image = ["scipy", "numpy (>=1.17.2)", "packaging", "torchvision", "lpips", "torch-fidelity", "torch (>=1.3.1)"]
+integrate = ["numpy (>=1.17.2)", "packaging", "torch (>=1.3.1)", "pytorch-lightning (>=1.0)"]
+test = ["phmdoctest (>=1.1.1)", "pytest (>=6.0)", "cloudpickle (>=1.3)", "twine (>=3.2)", "codecov (>=2.1)", "sacrebleu (>=2.0.0)", "scikit-image (>0.17.1)", "mir-eval (>=0.6)", "numpy (>=1.17.2)", "isort (>=5.0)", "scikit-learn (>=0.24)", "mypy (>=0.790)", "jiwer (>=2.2.0)", "torch (>=1.3.1)", "check-manifest", "flake8", "transformers (>=4.0)", "bert-score (==0.3.10)", "packaging", "rouge-score (>=0.0.4)", "coverage (>5.2)", "pre-commit (>=1.0)", "pytest-cov (>2.10)", "pypesq"]
+text = ["numpy (>=1.17.2)", "packaging", "tqdm (>=4.41.0)", "regex (>=2021.9.24)", "nltk (>=3.6)", "torch (>=1.3.1)"]
 
 [[package]]
 name = "tqdm"
@@ -1829,8 +1838,8 @@ multidict = ">=4.0"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "3.9.*"
-content-hash = "a2fc910ced4bf1fa3a176c2c531932f64d69ffa7eab73b3e8cba56c983bc1664"
+python-versions = "^3.9"
+content-hash = "b41b2beff993e0237f5222f56b9ff125c3dd84fb5cf3139b74fdf8bec2571caf"
 
 [metadata.files]
 absl-py = [
@@ -2008,15 +2017,15 @@ data-science-types = [
     {file = "data_science_types-0.2.23-py3-none-any.whl", hash = "sha256:bca319abc0e53a0316f9fcb887937e942477cb9e5fc63c8581e0b0438903b977"},
 ]
 datasets = [
-    {file = "datasets-1.14.0-py3-none-any.whl", hash = "sha256:c16f2c164486c4b33545840a002f00b63238921b961b9aec04961b02de216564"},
-    {file = "datasets-1.14.0.tar.gz", hash = "sha256:102bffbccb84b647e373bc27661720f87e05ba69b1ba526f3b42b0106eda8341"},
+    {file = "datasets-1.15.1-py3-none-any.whl", hash = "sha256:e5ac4ef477a5e50c0033b33550e5c81e05c1d46fc8ac76baebada4194cccea09"},
+    {file = "datasets-1.15.1.tar.gz", hash = "sha256:4b7c32a5f14e29a8c1a36070d406a2fb671bc9bd70f2ac4c49ea1d4dd5387a4d"},
 ]
 decorator = [
     {file = "decorator-5.1.0-py3-none-any.whl", hash = "sha256:7b12e7c3c6ab203a29e157335e9122cb03de9ab7264b137594103fd4a683b374"},
     {file = "decorator-5.1.0.tar.gz", hash = "sha256:e59913af105b9860aa2c8d3272d9de5a56a4e608db9a2f167a8480b323d529a7"},
 ]
 deepspeed = [
-    {file = "deepspeed-0.5.4.tar.gz", hash = "sha256:2cdb8d9fe82bc3ff10d181b5d4419e857622c643cf9bfa05141ceb83d89cfcdb"},
+    {file = "deepspeed-0.5.5.tar.gz", hash = "sha256:03fc7c89b00cfb8abad2af98c662f22032bb9550813908548dbd47499be75a06"},
 ]
 dill = [
     {file = "dill-0.3.4-py2.py3-none-any.whl", hash = "sha256:7e40e4a70304fd9ceab3535d36e58791d9c4a776b38ec7f7ec9afc8d3dca4d4f"},
@@ -2179,8 +2188,8 @@ grpcio = [
     {file = "grpcio-1.41.1.tar.gz", hash = "sha256:9b751271b029432a526a4970dc9b70d93eb6f0963b6a841b574f780b72651969"},
 ]
 huggingface-hub = [
-    {file = "huggingface_hub-0.0.19-py3-none-any.whl", hash = "sha256:edcea87cbd709073a63fc911efa2d8fd8304f62cfe43f0bf497dec8eaac10369"},
-    {file = "huggingface_hub-0.0.19.tar.gz", hash = "sha256:6ea6fff78b692fc9b05e0315c2d7d835a6f42902e472eadeceebff12babd6c06"},
+    {file = "huggingface_hub-0.1.0-py3-none-any.whl", hash = "sha256:5e82637698a27f2e879a538acf02dc56a4931781f40f8441e01001c5f0026b18"},
+    {file = "huggingface_hub-0.1.0.tar.gz", hash = "sha256:821c8707cf7fe4b31cdccadb7ca4bac3affa47378e54426bde73edcbc5d10225"},
 ]
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
@@ -2198,8 +2207,8 @@ ipython = [
     {file = "ipython-7.29.0.tar.gz", hash = "sha256:4f69d7423a5a1972f6347ff233e38bbf4df6a150ef20fbb00c635442ac3060aa"},
 ]
 isort = [
-    {file = "isort-5.9.3-py3-none-any.whl", hash = "sha256:e17d6e2b81095c9db0a03a8025a957f334d6ea30b26f9ec70805411e5c7c81f2"},
-    {file = "isort-5.9.3.tar.gz", hash = "sha256:9c2ea1e62d871267b78307fe511c0838ba0da28698c5732d54e2790bf3ba9899"},
+    {file = "isort-5.10.0-py3-none-any.whl", hash = "sha256:1a18ccace2ed8910bd9458b74a3ecbafd7b2f581301b0ab65cfdd4338272d76f"},
+    {file = "isort-5.10.0.tar.gz", hash = "sha256:e52ff6d38012b131628cf0f26c51e7bd3a7c81592eefe3ac71411e692f1b9345"},
 ]
 jedi = [
     {file = "jedi-0.18.0-py2.py3-none-any.whl", hash = "sha256:18456d83f65f400ab0c2d3319e48520420ef43b23a086fdc05dff34132f0fb93"},
@@ -2908,8 +2917,8 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 pytorch-lightning = [
-    {file = "pytorch-lightning-1.4.9.tar.gz", hash = "sha256:39cb732483747aeceb3def508fd02a01b329e348720ce90894730e177ad4348e"},
-    {file = "pytorch_lightning-1.4.9-py3-none-any.whl", hash = "sha256:3eb3ce4e1b38b3f37cc3a76b6a29c97c237aa053d45114b6423ffa345c71524a"},
+    {file = "pytorch-lightning-1.5.0.tar.gz", hash = "sha256:5bc28022f749d6a7644027ca0428bc162c9ab401cdea78b264d14f5018430f3b"},
+    {file = "pytorch_lightning-1.5.0-py3-none-any.whl", hash = "sha256:e6bc07908b0ca82d69424fb52e8b14189d6ed2fd13a9ffd9adf68d11830b302a"},
 ]
 pytz = [
     {file = "pytz-2021.3-py2.py3-none-any.whl", hash = "sha256:3672058bc3453457b622aab7a1c3bfd5ab0bdae451512f6cf25f64ed37f5b87c"},
@@ -3212,8 +3221,8 @@ torch = [
     {file = "torch-1.10.0-cp39-none-macosx_10_9_x86_64.whl", hash = "sha256:d6ef87470b44df9970e84542547d5ba7720bb89616602441df555a39b124e2bc"},
 ]
 torchmetrics = [
-    {file = "torchmetrics-0.5.1-py3-none-any.whl", hash = "sha256:4e5497bc5c9d19fa520748cda89f6d863868bb5be33ec47d2834c0988bf737c5"},
-    {file = "torchmetrics-0.5.1.tar.gz", hash = "sha256:22fbcb6fc05348ca3f2bd06e0763e88411a6b68c2b9fc26084b39d40cc4021b0"},
+    {file = "torchmetrics-0.6.0-py3-none-any.whl", hash = "sha256:80cc981b5f41be6daf034f30c273227135ecf1029a9bda6c2bc266371044fea7"},
+    {file = "torchmetrics-0.6.0.tar.gz", hash = "sha256:e96f16e07a3b8ec7326721166ee126f892d0fa848753f9c07677615ba5ea2121"},
 ]
 tqdm = [
     {file = "tqdm-4.62.3-py2.py3-none-any.whl", hash = "sha256:8dd278a422499cd6b727e6ae4061c40b48fce8b76d1ccbf5d34fca9b7f925b0c"},
