@@ -44,29 +44,31 @@ class RelationEnsemble(pl.LightningModule):
 
         output = []
         if sequence:
-            for item in sequence:
+            for text in sequence:
                 if any(
-                    x not in item for x in ["<head>", "</head>", "<tail>", "</tail>"]
+                    x not in text for x in ["<head>", "</head>", "<tail>", "</tail>"]
                 ):
                     continue
+                item = {}
+                item["sentence"] = text
+
                 features = convert_examples_to_features(
                     item,
                     max_seq_len=Const.MAX_TOKEN_LEN,
                     tokenizer=self.tokenizer,
-                    labels=False,
                 )
 
                 # truncation may remove tail/head so ignore
+                if features:
+                    rel_out = self.rel_model(
+                        features["input_ids"].unsqueeze(0).to("cuda"),
+                        features["attention_mask"].unsqueeze(0).to("cuda"),
+                        features["labels"],
+                        features["e1_mask"].unsqueeze(0).to("cuda"),
+                        features["e2_mask"].unsqueeze(0).to("cuda"),
+                    )
 
-                rel_out = self.rel_model(
-                    features["input_ids"].unsqueeze(0).to("cuda"),
-                    features["attention_mask"].unsqueeze(0).to("cuda"),
-                    features["labels"],
-                    features["e1_mask"].unsqueeze(0).to("cuda"),
-                    features["e2_mask"].unsqueeze(0).to("cuda"),
-                )
-
-                output.append(
-                    (item, Label("REL").idx[rel_out[0].argmax(dim=1)[0].tolist()])
-                )
+                    output.append(
+                        (item, Label("REL").idx[rel_out[0].argmax(dim=1)[0].tolist()])
+                    )
         return output

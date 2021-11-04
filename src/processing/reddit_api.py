@@ -228,14 +228,16 @@ SUBREDDITS = [
     "guernsey",
 ]
 
-api = PushshiftAPI(shards_down_behavior=None)
-OUT_FILE = "data/reddit_comments/comments.json"
 
-with open(OUT_FILE, "w") as f:
-    for subreddit in tqdm(SUBREDDITS):
-        print(f"Getting comments from {subreddit}.")
-        gen = api.search_comments(subreddit=subreddit)
-        for obj in tqdm(gen):
-            obj = {"subreddit": obj.subreddit, "text": obj.body}
-            json.dump(obj, f)
-            f.write("\n")
+if __name__ == "__main__":
+    api = PushshiftAPI(shards_down_behavior=None)
+    OUT_FILE = "data/reddit_comments/comments.json"
+
+    with open(OUT_FILE, "w") as f:
+        for subreddit in tqdm(SUBREDDITS):
+            print(f"Getting comments from {subreddit}.")
+            gen = api.search_comments(subreddit=subreddit)
+            for obj in tqdm(gen):
+                obj = {"subreddit": obj.subreddit, "text": obj.body}
+                json.dump(obj, f)
+                f.write("\n")

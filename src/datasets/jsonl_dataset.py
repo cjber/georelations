@@ -1,26 +1,11 @@
 import jsonlines
 import torch
 from ekphrasis.classes.preprocessor import TextPreProcessor
-from ekphrasis.classes.tokenizer import SocialTokenizer
-from ekphrasis.dicts.emoticons import emoticons
 from pathlib import Path
 from src.common.utils import Const
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.tokenization_utils import PreTrainedTokenizer
-
-text_processor = TextPreProcessor(
-    normalize=Const.NORMALIZE,
-    annotate={"hashtag"},
-    fix_html=True,
-    segmenter="twitter",
-    corrector="twitter",
-    unpack_hashtags=True,
-    unpack_contractions=True,
-    spell_correct_elong=False,
-    tokenizer=SocialTokenizer(lowercase=False).tokenize,
-    dicts=[emoticons],
-)
 
 
 class JSONLDataset(Dataset):
@@ -28,7 +13,7 @@ class JSONLDataset(Dataset):
         self, path: Path, tokenizer: PreTrainedTokenizer = AutoTokenizer  # type: ignore
     ) -> None:
         with jsonlines.open(path, "r") as jl:
-            self.data = [line["text"] for line in jl]
+            self.data = [line["text"] for line in jl]  # type: ignore (jsonlines issue)
         self.data = [self.normalise(line) for line in self.data]
 
         self.tokenizer = tokenizer.from_pretrained(
@@ -38,6 +23,7 @@ class JSONLDataset(Dataset):
         self.tokenizer.add_special_tokens(
             {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
+        self.text_processor = TextPreProcessor(**Const.TEXT_PROCESSOR_ARGS)
 
     def __len__(self) -> int:
         return len(self.data)
@@ -57,6 +43,5 @@ class JSONLDataset(Dataset):
             attention_mask=encoding["attention_mask"].flatten(),
         )
 
-    @staticmethod
-    def normalise(line: str) -> str:
-        return " ".join(text_processor.pre_process_doc(line))
+    def normalise(self, line: str) -> str:
+        return " ".join(self.text_processor.pre_process_doc(line))

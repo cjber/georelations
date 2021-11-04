@@ -1,6 +1,6 @@
 import pandas as pd
 import torch
-from seqeval.metrics import accuracy_score, classification_report
+from seqeval.metrics import classification_report
 from seqeval.scheme import BILOU
 from src.common.utils import Label
 from torchmetrics import Metric
@@ -54,8 +54,5 @@ class Seqeval(Metric):
         report["overall_precision"] = overall_score["precision"]
         report["overall_recall"] = overall_score["recall"]
         report["overall_f1"] = overall_score["f1-score"]
-        # report["overall_accuracy"] = accuracy_score(
-        #     y_true=target_bioul, y_pred=pred_bioul
-        # )
 
         return pd.json_normalize(report, sep="_").to_dict(orient="records")[0]  # type: ignore

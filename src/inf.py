@@ -1,11 +1,10 @@
-import jsonlines
 import pandas as pd
 import pytorch_lightning as pl
 from pathlib import Path
-from src.pl_data.text_dataset import JSONLDataset
-from src.pl_modules.ensemble import RelationEnsemble
-from src.pl_modules.ger_model import GERModel
-from src.pl_modules.rbert_model import RBERT
+from src.datasets.jsonl_dataset import JSONLDataset
+from src.modules.ensemble import RelationEnsemble
+from src.modules.ger_model import GERModel
+from src.modules.rbert_model import RBERT
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 

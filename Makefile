@@ -17,7 +17,8 @@ dev:
 
 pytest:
 ## pytest: run pytest doctest and unit tests
-	poetry run python -m coverage run -m pytest --doctest-modules src/common
+	poetry run python -m pytest \
+		&& poetry run python -m coverage run -m pytest --doctest-modules src/common
 
 clean:
 ## clean: remove all experiments and cache files

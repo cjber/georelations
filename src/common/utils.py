@@ -1,7 +1,8 @@
 import numpy as np
-import pandas as pd
 import torch
 from collections import Counter
+from ekphrasis.classes.tokenizer import SocialTokenizer
+from ekphrasis.dicts.emoticons import emoticons
 from torch import Tensor
 from typing import Union
 
@@ -40,6 +41,19 @@ class Const:
         "date",
         "number",
     ]
+
+    TEXT_PROCESSOR_ARGS = dict(
+        normalize=NORMALIZE,
+        annotate={"hashtag"},
+        fix_html=True,
+        segmenter="twitter",
+        corrector="twitter",
+        unpack_hashtags=True,
+        unpack_contractions=True,
+        spell_correct_elong=False,
+        tokenizer=SocialTokenizer(lowercase=True).tokenize,
+        dicts=[emoticons],
+    )
 
 
 class Label:
@@ -117,6 +131,9 @@ def encode_labels(
 
     >>> len(encoding['input_ids'].flatten()) == len(labels_encoded)
     True
+
+    >>> labels_encoded.tolist()[:6]
+    [-100, 1, 0, 0, 0, -100]
     """
     encoding = tokenizer(
         tokens,
@@ -273,27 +290,16 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], No
     return sequence_list
 
 
-def convert_examples_to_features(
-    item: Union[pd.Series, str],
-    max_seq_len: int,
-    tokenizer,
-    labels: bool = True,
-    cls_token: str = "[CLS]",
-    sep_token: str = "[SEP]",
-    pad_token: int = 0,
-    add_sep_token: bool = False,
-    mask_padding_with_zero: bool = True,
-):
-    label_id = None
-    if labels:
+def convert_examples_to_features(item: dict, max_seq_len: int, tokenizer) -> dict:
+    if "sentence" in item:
         tokens_a = tokenizer.tokenize(
-            item["sentence"],
+            item["sentence"],  # type: ignore (pd.Series: str)
             max_length=max_seq_len,
             padding="max_length",
             truncation=True,
             return_tensors="pt",
         )
-        label_id = int(item["relation"])
+        label_id = int(item["relation"])  # type: ignore (pd.Series: int)
     else:
         tokens_a = tokenizer.tokenize(
             item,
@@ -302,10 +308,11 @@ def convert_examples_to_features(
             truncation=True,
             return_tensors="pt",
         )
+        label_id = None
 
     # if tokenization shortens the string
     if any(x not in item for x in ["<head>", "</head>", "<tail>", "</tail>"]):
-        return None
+        return {}
 
     e11_p = tokens_a.index("<head>")  # the start position of entity1
     e12_p = tokens_a.index("</head>")  # the end position of entity1
@@ -325,26 +332,21 @@ def convert_examples_to_features(
     e22_p += 1
 
     # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.
-    special_tokens_count = 2 if add_sep_token else 1
+    special_tokens_count = 1
     if len(tokens_a) > max_seq_len - special_tokens_count:
         tokens_a = tokens_a[: (max_seq_len - special_tokens_count)]
 
     tokens = tokens_a
-    if add_sep_token:
-        tokens += [sep_token]
-
-    tokens = [cls_token] + tokens
+    tokens = ["[CLS]"] + tokens
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
     # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-    attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
+    attention_mask = [1] * len(input_ids)
 
     # Zero-pad up to the sequence length.
     padding_length = max_seq_len - len(input_ids)
-    input_ids = input_ids + ([pad_token] * padding_length)
-    attention_mask = attention_mask + (
-        [0 if mask_padding_with_zero else 1] * padding_length
-    )
+    input_ids = input_ids + ([0] * padding_length)
+    attention_mask = attention_mask + ([0] * padding_length)
 
     # e1 mask, e2 mask
     e1_mask = [0] * len(attention_mask)
@@ -365,7 +367,7 @@ def convert_examples_to_features(
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
         "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
-        "labels": torch.tensor(label_id, dtype=torch.long) if labels else None,
+        "labels": torch.tensor(label_id, dtype=torch.long) if label_id else None,
         "e1_mask": torch.tensor(e1_mask, dtype=torch.long),
         "e2_mask": torch.tensor(e2_mask, dtype=torch.long),
     }

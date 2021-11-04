@@ -1,4 +1,4 @@
-FROM docker.io/cjber/cuda as ENV
+FROM docker.io/cjber/cuda
 
 RUN pacman -Syu python-pip --noconfirm \
     && pip install poetry

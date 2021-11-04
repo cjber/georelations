@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 import torch
 from src.common.utils import Const, Label, combine_biluo, combine_subwords, tdict
-from src.pl_metric.metric import Seqeval
+from src.metrics.seqeval_f1 import Seqeval
 from torch import Tensor
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau

@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from src.common.utils import Const
-
-# https://github.com/Spico197/NYT-H
 from typing import Union
 
 
@@ -117,13 +115,13 @@ class NYTReader:
 
 
 def main():
-    reader = NYTReader(Path("data/distant_data/train.json"))
+    reader = NYTReader(Path("data/rel_data/train.json"))
     relations = reader.read()
-    relations.to_csv("./data/distant_data/relations.csv", index=False)
+    relations.to_csv("./data/rel_data/relations.csv", index=False)
 
-    reader = NYTReader(Path("data/distant_data/test.json"))
+    reader = NYTReader(Path("data/rel_data/test.json"))
     relations_test = reader.read()
-    relations_test.to_csv("./data/distant_data/relations_test.csv", index=False)
+    relations_test.to_csv("./data/rel_data/relations_test.csv", index=False)
 
 
 if __name__ == "__main__":

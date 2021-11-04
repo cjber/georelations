@@ -130,8 +130,8 @@ if __name__ == "__main__":
                     dataset=RELDataset,
                     pl_model=RBERT,
                     name="rel",
-                    path=DATA_DIR / "distant_data" / "relations.csv",
-                    test_path=DATA_DIR / "distant_data" / "relations_test.csv",
+                    path=DATA_DIR / "rel_data" / "relations.csv",
+                    test_path=DATA_DIR / "rel_data" / "relations_test.csv",
                     seed=seed,
                 )
     elif args.model == "ger":
@@ -148,8 +148,8 @@ if __name__ == "__main__":
             dataset=RELDataset,
             pl_model=RBERT,
             name="rel",
-            path=DATA_DIR / "distant_data" / "relations.csv",
-            test_path=DATA_DIR / "distant_data" / "relations_test.csv",
+            path=DATA_DIR / "rel-data" / "relations.csv",
+            test_path=DATA_DIR / "rel_data" / "relations_test.csv",
             seed=args.seed[0],
         )
     else:
