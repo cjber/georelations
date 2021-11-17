@@ -5,15 +5,7 @@ PYTHON = python3
 SEEDS = 487 726 231 879 323
 
 env:
-	- poetry install
-
-train:
-## train: train full model
-	${PYTHON} -m src.run
-
-dev:
-## dev: dev run of training
-	${PYTHON} -m src.run --fast_dev_run=True
+	poetry install
 
 pytest:
 ## pytest: run pytest doctest and unit tests

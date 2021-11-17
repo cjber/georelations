@@ -11,7 +11,7 @@
 ## Description
 
 A two stage ensemble for extracting geographic relationships between two
-named geographic entities in text. Uses fine-tuned DistilBERT entity
+named geographic entities in text. Uses fine-tuned RoBERTa entity
 recognition and classification models for [Relationship
 Extraction](https://paperswithcode.com/task/relation-extraction),
 focussing purely on geographic entities (place names).
@@ -40,7 +40,7 @@ src
 ├── datasets
 │   ├── wnut_dataset.py  # torch dataset for wnut data for ger model
 │   ├── rel_dataset.py  # torch dataset for nyt-h data for rel model
-│   ├── jsonl_dataset.py  # torch dataset for reddit comments data for inference
+│   ├── jsonl_dataset.py  # torch dataset for reddit comments
 │   └── datamodule.py  # lightning datamodule
 │
 ├── metrics
@@ -49,7 +49,7 @@ src
 ├── modules
 │   ├── ger_model.py  # ger token classification model
 │   ├── rel_model.py  # rel sequence classification model
-│   └── ensemble.py  # ensemble wrapper used for inference pipeline
+│   └── ensemble.py  # inference pipeline using ensemble
 │
 ├── processing
 │   ├── process_nyth.py  # process nyt-h data into csv form
