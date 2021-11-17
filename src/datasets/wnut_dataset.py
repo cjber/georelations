@@ -36,11 +36,9 @@ class WNUTDataset(Dataset[dict[str, torch.Tensor]]):
         else:
             raise ValueError
         wnut = wnut.map(self.use_loc).map(self.normalise).map(self.to_biluo)  # type: ignore
-
         locs = wnut.filter(
             lambda example: any(x in [1, 4] for x in example["ner_tags"])
         )
-
         # reduce imbalance by keeping 1/8 of sentences w/o locations
         all_other = wnut.filter(
             lambda example: all(x not in [1, 4] for x in example["ner_tags"])

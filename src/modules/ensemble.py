@@ -1,12 +1,7 @@
 import itertools
 import pytorch_lightning as pl
 import torch
-from src.common.utils import (
-    Const,
-    Label,
-    convert_examples_to_features,
-    ents_to_relations,
-)
+from src.common.utils import Const, Label, convert_input, ents_to_relations
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 
@@ -22,7 +17,7 @@ class RelationEnsemble(pl.LightningModule):
         self.ger_model = ger_model
         self.rel_model = rel_model
 
-        self.tokenizer = tokenizer.from_pretrained(self.ger_model.model_name)
+        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
         self.tokenizer.add_special_tokens(
             {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
@@ -52,7 +47,7 @@ class RelationEnsemble(pl.LightningModule):
                 item = {}
                 item["sentence"] = text
 
-                features = convert_examples_to_features(
+                features = convert_input(
                     item,
                     max_seq_len=Const.MAX_TOKEN_LEN,
                     tokenizer=self.tokenizer,

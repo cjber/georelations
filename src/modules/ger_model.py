@@ -122,7 +122,7 @@ class GERModel(pl.LightningModule):
             },
         ]
 
-        opt = self.optim(lr=2e-5, params=optimizer_grouped_parameters)
+        opt = self.optim(lr=5e-5, params=optimizer_grouped_parameters)
         scheduler = self.scheduler(optimizer=opt, patience=1, verbose=True, mode="max")
 
         return {"optimizer": opt, "lr_scheduler": scheduler, "monitor": "val_f1"}

@@ -1,6 +1,6 @@
 import pandas as pd
 from pathlib import Path
-from src.common.utils import Const, Label, convert_examples_to_features
+from src.common.utils import Const, Label, convert_input
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from typing import Union
@@ -24,7 +24,7 @@ class RELDataset(Dataset):
 
     def __getitem__(self, index: int) -> Union[dict, None]:
         item = self.data.iloc[index].to_dict()
-        return convert_examples_to_features(
+        return convert_input(
             item,
             max_seq_len=Const.MAX_TOKEN_LEN,
             tokenizer=self.tokenizer,

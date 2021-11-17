@@ -82,7 +82,10 @@ class RBERT(pl.LightningModule):
         length_tensor = (e_mask != 0).sum(dim=1).unsqueeze(1)  # [batch_size, 1]
 
         # [b, 1, j-i+1] * [b, j-i+1, dim] = [b, 1, dim] -> [b, dim]
-        sum_vector = torch.bmm(e_mask_unsqueeze.float(), hidden_output).squeeze(1)
+        sum_vector = torch.bmm(
+            e_mask_unsqueeze.float(),
+            hidden_output.float(),
+        ).squeeze(1)
         return sum_vector.float() / length_tensor.float()
 
     def forward(
@@ -170,7 +173,11 @@ class RBERT(pl.LightningModule):
     def test_step(self, batch: tdict, batch_idx: int) -> Tensor:
         step_out = self.step(batch, batch_idx)
         loss = step_out["loss"]
-        test_f1 = f1(step_out["probs"], batch["labels"], num_classes=Label("REL").count)
+        test_f1 = f1(
+            step_out["probs"],
+            batch["labels"],
+            num_classes=Label("REL").count,
+        )
         self.log_dict({"test_loss": loss, "test_f1": test_f1})
         return loss
 
@@ -192,7 +199,7 @@ class RBERT(pl.LightningModule):
             },
         ]
 
-        opt = self.optim(lr=4e-5, params=optimizer_grouped_parameters)
-        scheduler = self.scheduler(optimizer=opt, patience=2, verbose=True)
+        opt = self.optim(lr=5e-5, params=optimizer_grouped_parameters)
+        scheduler = self.scheduler(optimizer=opt, patience=1, verbose=True)
 
         return {"optimizer": opt, "lr_scheduler": scheduler, "monitor": "train_loss"}
