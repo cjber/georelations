@@ -14,8 +14,9 @@ class JSONLDataset(Dataset):
     ) -> None:
         with jsonlines.open(path, "r") as jl:
             self.data = [line["text"] for line in jl]  # type: ignore (jsonlines issue)
-        self.data = [self.normalise(line) for line in self.data]
+        self.text_processor = TextPreProcessor(**Const.TEXT_PROCESSOR_ARGS)
 
+        self.data = [self.normalise(line) for line in self.data]
         self.tokenizer = tokenizer.from_pretrained(
             Const.MODEL_NAME,
             add_prefix_space=True,
@@ -23,7 +24,6 @@ class JSONLDataset(Dataset):
         self.tokenizer.add_special_tokens(
             {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
-        self.text_processor = TextPreProcessor(**Const.TEXT_PROCESSOR_ARGS)
 
     def __len__(self) -> int:
         return len(self.data)
