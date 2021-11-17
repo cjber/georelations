@@ -10,7 +10,7 @@ tdict = dict[str, Tensor]
 
 
 class Const:
-    MODEL_NAME = "bert-base-uncased"
+    MODEL_NAME = "roberta-base"
     MAX_TOKEN_LEN = 256
     SPECIAL_TOKENS = [
         "<head>",
@@ -125,7 +125,7 @@ def encode_labels(
     >>> tokens = ['Testing', 'this', 'for', 'doctest', '.']
     >>> labels = [1, 0, 0, 0, 0]
     >>> tokenizer = AutoTokenizer.from_pretrained(
-    ...     'distilbert-base-cased', add_prefix_space=True
+    ...     'roberta-base', add_prefix_space=True
     ... )
     >>> encoding, labels_encoded = encode_labels(tokens, labels, tokenizer, 32)
 
@@ -145,10 +145,9 @@ def encode_labels(
         truncation=True,
         return_tensors="pt",
     )
-
     offset = np.array(encoding.offset_mapping[0])
     doc_enc_labels = np.ones(max_token_len, dtype=int) * -100  # type: ignore
-    offsets_array = (offset[:, 0] == 0) & (offset[:, 1] != 0)
+    offsets_array = (offset[:, 0] == 1) & (offset[:, 1] != 1)
     if sum(offsets_array) < len(labels):
         doc_enc_labels[offsets_array] = labels[: sum(offsets_array)]
     else:
@@ -186,6 +185,7 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     >>> len(tags) == len(tokens)
     True
     """
+
     idx = [
         idx
         for idx, token in enumerate(tokens)
@@ -197,7 +197,7 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
 
     for idx, _ in enumerate(tokens):
         idx += 1
-        if tokens[-idx + 1].startswith("##"):
+        if not tokens[-idx + 1].startswith("Ġ"):
             tokens[-idx] = tokens[-idx] + tokens[-idx + 1][2:]
     subwords = [i for i, _ in enumerate(tokens) if not tokens[i].startswith("##")]
 
@@ -257,11 +257,20 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
 
 def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], None]:
     """
-    Convert list of combined entities and other tokens with tags into semeval format.
+    Convert a list of tokens and tags into relations using the head and tail format
+    used by the NYT corpus.
 
-    :param tokens list[str]: [TODO:description]
-    :param tags list[str]: [TODO:description]
-    :rtype Union[list[str], None]: [TODO:description]
+    Parameters
+    ----------
+    tokens : list[str]
+        List of tokens.
+    tags : list[str]
+        List of tags.
+
+    Returns
+    -------
+    Union[list[str], None]
+        List of strings with head and tail annotations.
 
     Example:
 
@@ -290,29 +299,23 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], No
     return sequence_list
 
 
-def convert_examples_to_features(item: dict, max_seq_len: int, tokenizer) -> dict:
-    if "sentence" in item:
+def convert_input(item: dict, max_seq_len: int, tokenizer) -> Union[dict, None]:
+    if "relation" in item:
         tokens_a = tokenizer.tokenize(
             item["sentence"],  # type: ignore (pd.Series: str)
             max_length=max_seq_len,
-            padding="max_length",
             truncation=True,
             return_tensors="pt",
         )
         label_id = int(item["relation"])  # type: ignore (pd.Series: int)
     else:
         tokens_a = tokenizer.tokenize(
-            item,
+            item["sentence"],
             max_length=max_seq_len,
-            padding="max_length",
             truncation=True,
             return_tensors="pt",
         )
         label_id = None
-
-    # if tokenization shortens the string
-    if any(x not in item for x in ["<head>", "</head>", "<tail>", "</tail>"]):
-        return {}
 
     e11_p = tokens_a.index("<head>")  # the start position of entity1
     e12_p = tokens_a.index("</head>")  # the end position of entity1
@@ -332,9 +335,8 @@ def convert_examples_to_features(item: dict, max_seq_len: int, tokenizer) -> dic
     e22_p += 1
 
     # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.
-    special_tokens_count = 1
-    if len(tokens_a) > max_seq_len - special_tokens_count:
-        tokens_a = tokens_a[: (max_seq_len - special_tokens_count)]
+    if len(tokens_a) > max_seq_len - 1:
+        tokens_a = tokens_a[: (max_seq_len - 1)]
 
     tokens = tokens_a
     tokens = ["[CLS]"] + tokens
@@ -367,7 +369,9 @@ def convert_examples_to_features(item: dict, max_seq_len: int, tokenizer) -> dic
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
         "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
-        "labels": torch.tensor(label_id, dtype=torch.long) if label_id else None,
+        "labels": torch.tensor(label_id, dtype=torch.long)
+        if label_id is not None
+        else None,
         "e1_mask": torch.tensor(e1_mask, dtype=torch.long),
         "e2_mask": torch.tensor(e2_mask, dtype=torch.long),
     }
