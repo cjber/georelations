@@ -25,11 +25,11 @@ def load_dataset(datadir: Path):
 
 
 def run():
-    rel_model = load_pretrained_model(
-        RBERT, "ckpts/seed_42/rel/checkpoints/checkpoint.ckpt", "cuda"
-    )
     ger_model = load_pretrained_model(
         GERModel, "ckpts/seed_42/ger/checkpoints/checkpoint.ckpt", "cuda"
+    )
+    rel_model = load_pretrained_model(
+        RBERT, "ckpts/seed_42/rel/checkpoints/checkpoint.ckpt", "cuda"
     )
 
     model = RelationEnsemble(ger_model, rel_model)

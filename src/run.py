@@ -9,11 +9,11 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
 )
 from pytorch_lightning.loggers import CSVLogger
-from src.pl_data.csv_dataset import RELDataset
-from src.pl_data.datamodule import DataModule
-from src.pl_data.wnut_dataset import WNUTDataset
-from src.pl_modules.ger_model import GERModel
-from src.pl_modules.rbert_model import RBERT
+from src.datasets.datamodule import DataModule
+from src.datasets.rel_dataset import RELDataset
+from src.datasets.wnut_dataset import WNUTDataset
+from src.modules.ger_model import GERModel
+from src.modules.rbert_model import RBERT
 from typing import Union
 
 DATA_DIR = Path("data")
@@ -21,6 +21,7 @@ DATA_DIR = Path("data")
 parser = ArgumentParser()
 
 parser.add_argument("--fast_dev_run", type=bool, default=False)
+parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--seed", nargs="+", type=int, default=[42])
 parser.add_argument("--model", type=str)
 parser.add_argument("--save_to_hub", type=str)
@@ -35,8 +36,8 @@ def build_callbacks() -> list[Callback]:
             log_momentum=False,
         ),
         EarlyStopping(
-            monitor="val_f1",
-            mode="max",
+            monitor="val_loss",
+            mode="min",
             verbose=True,
             min_delta=0.0,
             patience=3,
@@ -60,7 +61,7 @@ def run(
     test_path: Union[Path, str],
     seed: int,
     args=args,
-) -> None:  # sourcery skip: boolean-if-exp-identity
+) -> None:
     seed_everything(seed, workers=True)
 
     datamodule: pl.LightningDataModule = DataModule(
@@ -68,7 +69,7 @@ def run(
         path=path,
         test_path=test_path,
         num_workers=8,
-        batch_size=2,
+        batch_size=args.batch_size,
         seed=seed,
     )
     model: pl.LightningModule = pl_model()
@@ -79,30 +80,27 @@ def run(
         version=name,
     )
 
-    gpus = None if args.fast_dev_run else -1
-    auto_select_gpus = False if args.fast_dev_run else True
-    precision = 64 if args.fast_dev_run else 16
+    if args.fast_dev_run:
+        trainer_kwargs = {"gpus": None, "auto_select_gpus": False}
+    else:
+        trainer_kwargs = {"gpus": -1, "auto_select_gpus": True, "precision": 16}
 
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         args,
+        **trainer_kwargs,
         deterministic=True,  # ensure reproducible results
         default_root_dir="ckpts",
         logger=[csv_logger],
         log_every_n_steps=10,
         callbacks=callbacks,
-        gpus=gpus,
-        auto_select_gpus=auto_select_gpus,
-        precision=precision,
         max_epochs=35,
-        benchmark=True,
-        stochastic_weight_avg=True,
     )
 
     trainer.tune(model=model, datamodule=datamodule)
-    trainer.fit(model=model)
+    trainer.fit(model=model, datamodule=datamodule)
 
     if not args.fast_dev_run:
-        test = trainer.test()
+        test = trainer.test(model=model, ckpt_path="best", datamodule=datamodule)
         pd.DataFrame(test).to_csv(
             "csv_logs/seed_" + str(seed) + "_" + name + "_test.csv"
         )
@@ -148,7 +146,7 @@ if __name__ == "__main__":
             dataset=RELDataset,
             pl_model=RBERT,
             name="rel",
-            path=DATA_DIR / "rel-data" / "relations.csv",
+            path=DATA_DIR / "rel_data" / "relations.csv",
             test_path=DATA_DIR / "rel_data" / "relations_test.csv",
             seed=args.seed[0],
         )

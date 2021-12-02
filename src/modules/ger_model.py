@@ -61,12 +61,13 @@ class GERModel(pl.LightningModule):
                 tokens: list = self.tokenizer.convert_ids_to_tokens(id_batch.tolist())
                 tags: list = logit_batch.argmax(dim=1).tolist()
                 tokens, tags = combine_subwords(tokens, tags)
-                tokens, tags = combine_biluo(tokens, tags)
-                batch_out.append({"tokens": tokens, "tags": tags})
+                if tokens:
+                    tokens, tags = combine_biluo(tokens, tags)
+                    batch_out.append({"tokens": tokens, "tags": tags})
             return batch_out
         return outputs
 
-    def step(self, batch: Any, _: int) -> tdict:
+    def step(self, batch: tdict, _: int) -> tdict:
         outputs = self(
             input_ids=batch["input_ids"],
             attention_mask=batch["attention_mask"],
@@ -84,16 +85,15 @@ class GERModel(pl.LightningModule):
             preds=step_out["preds"],
             targets=batch["labels"],
         ).pop("overall_f1")
-        self.log_dict({"train_loss": loss, "train_f1": train_f1}, prog_bar=True)
+        self.log_dict({"train_loss": loss, "train_f1": train_f1}, prog_bar=False)
         return loss
 
     def validation_step(self, batch: tdict, batch_idx: int) -> Tensor:
         step_out = self.step(batch, batch_idx)
         loss = step_out["loss"]
-        val_f1 = self.val_metric(
-            preds=step_out["preds"],
-            targets=batch["labels"],
-        ).pop("overall_f1")
+        val_f1 = self.val_metric(preds=step_out["preds"], targets=batch["labels"]).pop(
+            "overall_f1"
+        )
         self.log_dict({"val_loss": loss, "val_f1": val_f1}, prog_bar=True)
         return loss
 
@@ -122,7 +122,7 @@ class GERModel(pl.LightningModule):
             },
         ]
 
-        opt = self.optim(lr=5e-5, params=optimizer_grouped_parameters)
-        scheduler = self.scheduler(optimizer=opt, patience=1, verbose=True, mode="max")
+        opt = self.optim(lr=2e-5, params=optimizer_grouped_parameters)
+        scheduler = self.scheduler(optimizer=opt, patience=1, verbose=True, mode="min")
 
-        return {"optimizer": opt, "lr_scheduler": scheduler, "monitor": "val_f1"}
+        return {"optimizer": opt, "lr_scheduler": scheduler, "monitor": "val_loss"}

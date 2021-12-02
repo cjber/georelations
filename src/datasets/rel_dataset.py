@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from pathlib import Path
 from src.common.utils import Const, Label, convert_input
@@ -5,27 +6,27 @@ from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from typing import Union
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 
 class RELDataset(Dataset):
     def __init__(self, path: Path, tokenizer=AutoTokenizer) -> None:
         super().__init__()
-        self.data: pd.DataFrame = pd.read_csv(path)
-        self.data["relation"] = self.data["relation"].apply(
-            lambda x: Label("REL").labels[x]
-        )
-
-        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
-        self.tokenizer.add_special_tokens(
+        data: pd.DataFrame = pd.read_csv(path)
+        data["relation"] = data["relation"].apply(lambda x: Label("REL").labels[x])
+        tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
+        tokenizer.add_special_tokens(
             {"additional_special_tokens": Const.SPECIAL_TOKENS}
         )
+
+        self.data: list[dict] = [
+            convert_input(row, Const.MAX_TOKEN_LEN, tokenizer)
+            for row in data.to_dict(orient="records")
+        ]
+        self.data = list(filter(None, self.data))
 
     def __len__(self) -> int:
         return len(self.data)
 
     def __getitem__(self, index: int) -> Union[dict, None]:
-        item = self.data.iloc[index].to_dict()
-        return convert_input(
-            item,
-            max_seq_len=Const.MAX_TOKEN_LEN,
-            tokenizer=self.tokenizer,
-        )
+        return self.data[index]

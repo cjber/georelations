@@ -11,7 +11,7 @@ tdict = dict[str, Tensor]
 
 class Const:
     MODEL_NAME = "roberta-base"
-    MAX_TOKEN_LEN = 256
+    MAX_TOKEN_LEN = 64
     SPECIAL_TOKENS = [
         "<head>",
         "</head>",
@@ -176,7 +176,7 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     Example
     -------
 
-    >>> tokens = ['Very', '##long', '##word', 'for', 'doct', '##est', '.']
+    >>> tokens = ['ĠVery', 'long', 'word', 'Ġfor', 'Ġdoct', 'est', 'Ġ.']
     >>> tags = [4, -100, -100, 0, 4, -100, 0]
     >>> tokens, tags = combine_subwords(tokens, tags)
 
@@ -187,9 +187,7 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     """
 
     idx = [
-        idx
-        for idx, token in enumerate(tokens)
-        if token not in ["[CLS]", "[PAD]", "[SEP]"]
+        idx for idx, token in enumerate(tokens) if token not in ["<s>", "<pad>", "</s>"]
     ]
 
     tokens = [tokens[i] for i in idx]
@@ -198,11 +196,11 @@ def combine_subwords(tokens: list[str], tags: list[int]) -> tuple[list[str], lis
     for idx, _ in enumerate(tokens):
         idx += 1
         if not tokens[-idx + 1].startswith("Ġ"):
-            tokens[-idx] = tokens[-idx] + tokens[-idx + 1][2:]
-    subwords = [i for i, _ in enumerate(tokens) if not tokens[i].startswith("##")]
+            tokens[-idx] = tokens[-idx] + tokens[-idx + 1]
+    subwords = [i for i, _ in enumerate(tokens) if tokens[i].startswith("Ġ")]
 
     tags = [tags[i] for i in subwords]
-    tokens = [tokens[i] for i in subwords]
+    tokens = [tokens[i][1:] for i in subwords]
     tags_str: list[str] = [Label("GER").idx[i] for i in tags]
     return tokens, tags_str
 
@@ -245,14 +243,18 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
                 i += 1
                 if idx + i == len(tokens_biluo):
                     break
+
     zipped = [
         (token, tag)
         for (token, tag) in zip(tokens_biluo, tags_biluo)
         if tag[0] not in ["I", "L"]
     ]
-    tokens_biluo, tags_biluo = zip(*zipped)
-    tags_biluo = [tag[2:] if tag != "O" else tag for tag in tags_biluo]
-    return list(tokens_biluo), tags_biluo
+    if list(zipped):
+        tokens_biluo, tags_biluo = zip(*zipped)
+        tags_biluo = [tag[2:] if tag != "O" else tag for tag in tags_biluo]
+        return list(tokens_biluo), tags_biluo
+    else:
+        return [], []
 
 
 def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], None]:
@@ -302,16 +304,16 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], No
 def convert_input(item: dict, max_seq_len: int, tokenizer) -> Union[dict, None]:
     if "relation" in item:
         tokens_a = tokenizer.tokenize(
-            item["sentence"],  # type: ignore (pd.Series: str)
-            max_length=max_seq_len,
+            item["sentence"],
+            # max_length=max_seq_len,
             truncation=True,
             return_tensors="pt",
         )
-        label_id = int(item["relation"])  # type: ignore (pd.Series: int)
+        label_id = int(item["relation"])
     else:
         tokens_a = tokenizer.tokenize(
             item["sentence"],
-            max_length=max_seq_len,
+            # max_length=max_seq_len,
             truncation=True,
             return_tensors="pt",
         )
@@ -322,59 +324,49 @@ def convert_input(item: dict, max_seq_len: int, tokenizer) -> Union[dict, None]:
     e21_p = tokens_a.index("<tail>")  # the start position of entity2
     e22_p = tokens_a.index("</tail>")  # the end position of entity2
 
-    # Replace the token
-    tokens_a[e11_p] = "$"
-    tokens_a[e12_p] = "$"
-    tokens_a[e21_p] = "#"
-    tokens_a[e22_p] = "#"
-
-    # Add 1 because of the [CLS] token
-    e11_p += 1
-    e12_p += 1
-    e21_p += 1
-    e22_p += 1
+    tokens_a = ["<s>"] + tokens_a
 
     # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.
     if len(tokens_a) > max_seq_len - 1:
         tokens_a = tokens_a[: (max_seq_len - 1)]
 
-    tokens = tokens_a
-    tokens = ["[CLS]"] + tokens
-    input_ids = tokenizer.convert_tokens_to_ids(tokens)
+    if all(x in tokens_a for x in ["<head>", "</head>", "<tail>", "</tail>"]):
+        input_ids = tokenizer.convert_tokens_to_ids(tokens_a)
 
-    # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-    attention_mask = [1] * len(input_ids)
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
+        attention_mask = [1] * len(input_ids)
 
-    # Zero-pad up to the sequence length.
-    padding_length = max_seq_len - len(input_ids)
-    input_ids = input_ids + ([0] * padding_length)
-    attention_mask = attention_mask + ([0] * padding_length)
+        # Zero-pad up to the sequence length.
+        padding_length = max_seq_len - len(input_ids)
+        input_ids = input_ids + ([1] * padding_length)
+        attention_mask = attention_mask + ([0] * padding_length)
 
-    # e1 mask, e2 mask
-    e1_mask = [0] * len(attention_mask)
-    e2_mask = [0] * len(attention_mask)
+        # e1 mask, e2 mask
+        e1_mask = [0] * len(attention_mask)
+        e2_mask = [0] * len(attention_mask)
 
-    for i in range(e11_p, e12_p + 1):
-        e1_mask[i] = 1
-    for i in range(e21_p, e22_p + 1):
-        e2_mask[i] = 1
+        if len(input_ids):
+            for i in range(e11_p, e12_p + 1):
+                e1_mask[i] = 1
+            for i in range(e21_p, e22_p + 1):
+                e2_mask[i] = 1
 
-    assert (
-        len(input_ids) == max_seq_len
-    ), f"Error with input length {len(input_ids)} vs {max_seq_len}"
-    assert (
-        len(attention_mask) == max_seq_len
-    ), f"Error with attention mask length {len(attention_mask)} vs {max_seq_len}"
+            assert (
+                len(input_ids) == max_seq_len
+            ), f"Error with input length {len(input_ids)} vs {max_seq_len}"
+            assert (
+                len(attention_mask) == max_seq_len
+            ), f"Error with attention mask length {len(attention_mask)} vs {max_seq_len}"
 
-    return {
-        "input_ids": torch.tensor(input_ids, dtype=torch.long),
-        "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
-        "labels": torch.tensor(label_id, dtype=torch.long)
-        if label_id is not None
-        else None,
-        "e1_mask": torch.tensor(e1_mask, dtype=torch.long),
-        "e2_mask": torch.tensor(e2_mask, dtype=torch.long),
-    }
+            return {
+                "input_ids": torch.tensor(input_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+                "labels": torch.tensor(label_id, dtype=torch.long)
+                if label_id is not None
+                else None,
+                "e1_mask": torch.tensor(e1_mask, dtype=torch.long),
+                "e2_mask": torch.tensor(e2_mask, dtype=torch.long),
+            }
 
 
 if __name__ == "__main__":

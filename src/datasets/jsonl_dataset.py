@@ -2,6 +2,7 @@ import jsonlines
 import torch
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from pathlib import Path
+from spacy.lang.en import English
 from src.common.utils import Const
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
@@ -16,6 +17,15 @@ class JSONLDataset(Dataset):
             self.data = [line["text"] for line in jl]  # type: ignore (jsonlines issue)
         self.text_processor = TextPreProcessor(**Const.TEXT_PROCESSOR_ARGS)
 
+        nlp = English()
+        nlp.add_pipe("sentencizer")
+
+        data = []
+        for doc in nlp.pipe(self.data):
+            for sent in doc.sents:
+                data.append(sent.text)
+
+        self.data = data
         self.data = [self.normalise(line) for line in self.data]
         self.tokenizer = tokenizer.from_pretrained(
             Const.MODEL_NAME,

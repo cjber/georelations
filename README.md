@@ -8,6 +8,14 @@
 
 </div>
 
+[Cillian Berragan](https://www.liverpool.ac.uk/geographic-data-science/our-people/) [[`@cjberragan`](http://twitter.com/cjberragan)]<sup>1*</sup>
+[Alex Singleton](https://www.liverpool.ac.uk/geographic-data-science/our-people/) [[`@alexsingleton`](https://twitter.com/alexsingleton)]<sup>1</sup>
+[Alessia Calafiore](https://www.liverpool.ac.uk/geographic-data-science/our-people/) [[`@alel_domi`](http://twitter.com/alel_domi)]<sup>1</sup>
+
+<sup>1</sup> *Geographic Data Science Lab, University of Liverpool, Liverpool, United Kingdom*
+
+<sup>*</sup> *Correspondence*: C.Berragan@liverpool.ac.uk
+
 ## Description
 
 A two stage ensemble for extracting geographic relationships between two
