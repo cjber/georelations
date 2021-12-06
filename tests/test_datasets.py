@@ -1,8 +1,8 @@
 from pathlib import Path
-from src.datasets.datamodule import DataModule
-from src.datasets.rel_dataset import RELDataset
-from src.datasets.wnut_dataset import WNUTDataset
-from src.modules.ger_model import GERModel
+from src.pl_data.datamodule import DataModule
+from src.pl_data.rel_dataset import RELDataset
+from src.pl_data.wnut_dataset import WNUTDataset
+from src.pl_module.ger_model import GERModel
 
 
 class TestDatasets:
