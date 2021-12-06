@@ -1,5 +1,5 @@
 import torch
-from datasets.arrow_dataset import concatenate_datasets
+from datasets import concatenate_datasets
 from datasets.load import load_dataset
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from pathlib import Path

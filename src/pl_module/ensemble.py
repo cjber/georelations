@@ -2,7 +2,7 @@ import itertools
 import pytorch_lightning as pl
 import torch
 from src.common.utils import Const, Label, convert_input, ents_to_relations
-from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers import AutoTokenizer
 
 
 class RelationEnsemble(pl.LightningModule):

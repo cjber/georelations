@@ -20,12 +20,7 @@ clean:
 
 docs:
 ## docs: build documentation automatically
-	rm -r docs \
-	    && poetry run python -m pdoc --html --force --output-dir docs \
-		src/pl_data \
-		src/pl_metric \
-		src/pl_modules \
-		src/common
+	poetry run python -m pdoc --html --force --output-dir docs src
 
 lint:
 ## lint: lint check all source files using black and flake8
@@ -34,10 +29,10 @@ lint:
 
 run:
 ## run: Train ger and rel model over 5 fixed seeds.
-	${PYTHON} -m src.run --model ger --seed ${SEEDS} \
+	${PYTHON} -m src.run --model ger --seed ${SEEDS} --batch_size 4 \
 	&& ${PYTHON} -m src.run --model rel --seed ${SEEDS}
 
 help:
 ## help: This helpful list of commands
-	@echo "Usage: \n"
+	@echo "Usage: "
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/-/'

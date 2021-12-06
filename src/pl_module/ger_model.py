@@ -1,12 +1,12 @@
 import pytorch_lightning as pl
 import torch
 from src.common.utils import Const, Label, combine_biluo, combine_subwords, tdict
-from src.metrics.seqeval_f1 import Seqeval
+from src.pl_metric.seqeval_f1 import Seqeval
 from torch import Tensor
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from transformers.models.auto.modeling_auto import AutoModelForTokenClassification
-from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers import AutoModelForTokenClassification
+from transformers import AutoTokenizer
 from typing import Any, Union
 
 

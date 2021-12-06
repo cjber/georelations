@@ -6,8 +6,8 @@ from torch import Tensor
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics.functional import f1
-from transformers.models.auto.modeling_auto import AutoModel
-from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers import AutoModel
+from transformers import AutoTokenizer
 from typing import Any
 
 

@@ -8,6 +8,11 @@
 
 </div>
 
+<p align="center">
+<a href="https://cjber.github.io/georelations/src">Documentation</a> •
+<a href="todo">FigShare (soon)</a>
+</p>
+
 [Cillian Berragan](https://www.liverpool.ac.uk/geographic-data-science/our-people/) [[`@cjberragan`](http://twitter.com/cjberragan)]<sup>1*</sup>
 [Alex Singleton](https://www.liverpool.ac.uk/geographic-data-science/our-people/) [[`@alexsingleton`](https://twitter.com/alexsingleton)]<sup>1</sup>
 [Alessia Calafiore](https://www.liverpool.ac.uk/geographic-data-science/our-people/) [[`@alel_domi`](http://twitter.com/alel_domi)]<sup>1</sup>
