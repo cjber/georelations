@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>src API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="&lt;div align=&#34;center&#34;&gt; …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,6 +22,153 @@
 <h1 class="title">Package <code>src</code></h1>
 </header>
 <section id="section-intro">
+<div align="center">
+# Geographic Relationship Extraction
+<a href="https://www.python.org"><img alt="Python" src="https://img.shields.io/badge/python%20-%2314354C.svg?&style=for-the-badge&logo=python&logoColor=white"/></a>
+<a href="https://pytorch.org/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch%20-%23EE4C2C.svg?&style=for-the-badge&logo=PyTorch&logoColor=white"/></a>
+<a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/-Lightning-blueviolet?style=for-the-badge"></a>
+</div>
+<p align="center">
+<a href="https://cjber.github.io/georelations/src">Documentation</a> •
+<a href="todo">FigShare (soon)</a>
+</p>
+<p><a href="https://www.liverpool.ac.uk/geographic-data-science/our-people/">Cillian
+Berragan</a>
+[<a href="http://twitter.com/cjberragan"><code>@cjberragan</code></a>]<sup>1*</sup> <a href="https://www.liverpool.ac.uk/geographic-data-science/our-people/">Alex
+Singleton</a>
+[<a href="https://twitter.com/alexsingleton"><code>@alexsingleton</code></a>]<sup>1</sup>
+<a href="https://www.liverpool.ac.uk/geographic-data-science/our-people/">Alessia
+Calafiore</a>
+[<a href="http://twitter.com/alel_domi"><code>@alel_domi</code></a>]<sup>1</sup></p>
+<p><sup>1</sup> <em>Geographic Data Science Lab, University of Liverpool,
+Liverpool, United Kingdom</em></p>
+<p><sup><em></sup> </em>Correspondence*: C.Berragan@liverpool.ac.uk</p>
+<h2 id="description">Description</h2>
+<p>A two stage ensemble for extracting geographic relationships between two
+named geographic entities in text. Uses fine-tuned RoBERTa entity
+recognition and classification models for <a href="https://paperswithcode.com/task/relation-extraction">Relationship
+Extraction</a>,
+focussing purely on geographic entities (place names).</p>
+<blockquote>
+<p><strong>Liverpool</strong> is in <strong>Merseyside</strong>.</p>
+<p>(Merseyside, <code>contains</code>, Liverpool)</p>
+</blockquote>
+<ol>
+<li><strong>Entity recognition</strong> uses a basic token classification head,
+trained using
+<a href="http://noisy-text.github.io/2017/emerging-rare-entities.html">WNUT17</a>,
+using only <code>location</code> entities.</li>
+<li><strong>Relation extraction</strong> mirrors the <code>R-BERT</code> architecture:
+<a href="https://arxiv.org/abs/1905.08284">Enriching Pre-trained Language Model and Entity Information for
+Relation Classification</a>, taking
+code from the <a href="https://github.com/monologg/R-BERT"><em>Unofficial</em> PyTorch
+implementation</a>.</li>
+</ol>
+<h2 id="project-layout">Project layout</h2>
+<pre><code class="language-bash">src
+├── common
+│   └── utils.py  # various utility functions and constants
+│
+├── datasets
+│   ├── wnut_dataset.py  # torch dataset for wnut data for ger model
+│   ├── rel_dataset.py  # torch dataset for nyt-h data for rel model
+│   ├── jsonl_dataset.py  # torch dataset for reddit comments
+│   └── datamodule.py  # lightning datamodule
+│
+├── metrics
+│   └── seqeval_f1.py  # seqeval f1 metric for pytorch lightning (BILUO)
+│
+├── modules
+│   ├── ger_model.py  # ger token classification model
+│   ├── rel_model.py  # rel sequence classification model
+│   └── ensemble.py  # inference pipeline using ensemble
+│
+├── processing
+│   ├── process_nyth.py  # process nyt-h data into csv form
+│   └── reddit_api.py  # use pushshift api to download reddit comments
+│
+├── run.py  # training loop for models
+└── inf.py  # use ensemble model with checkpoints for reddit comment inference
+</code></pre>
+<h2 id="how-to-run">How to run</h2>
+<h3 id="build-poetry-environment">Build poetry environment</h3>
+<p>Install dependencies using <a href="https://python-poetry.org/">Poetry</a>:</p>
+<pre><code class="language-bash">poetry install
+</code></pre>
+<h4 id="train-entity-recognition-model-using-wnut17">Train entity recognition model using <a href="https://huggingface.co/datasets/wnut_17">WNUT17</a>:</h4>
+<ul>
+<li>Run model training loop</li>
+</ul>
+<blockquote>
+<p><strong>NOTE:</strong> Dataset will automatically download</p>
+</blockquote>
+<pre><code>``` bash
+poetry run python -m src.run --model ger
+```
+</code></pre>
+<h4 id="train-relationship-classification-model-using-nyt-h-corpus">Train relationship classification model using <a href="https://github.com/Spico197/NYT-H">NYT-H corpus</a>.</h4>
+<ol>
+<li>
+<p>Download the corpus from the <a href="https://github.com/Spico197/NYT-H">NYT-H
+GitHub</a></p>
+</li>
+<li>
+<p>From the <a href="https://github.com/Spico197/NYT-H#file-structure-and-data-preparation">File Structure and Data
+Preparation</a>
+section prepare <code>train.json</code></p>
+<p><code>bash
+cat train_nonna.json na_train.json &gt; train.json</code></p>
+</li>
+<li>
+<p>Process <code>train.json</code> and <code>test.json</code> into
+<code>data/distant_data/{relations.csv,relations_test.csv}</code></p>
+<p><code>bash
+poetry run python -n src.processing.process_nyth.py</code></p>
+</li>
+<li>
+<p>Run model training loop</p>
+<p><code>bash
+poetry run python -m src.run --model rel</code></p>
+</li>
+</ol>
+<h4 id="run-inference">Run inference</h4>
+<ol>
+<li>
+<p>Get corpus of Reddit comments from UK place subreddits using the
+<a href="https://github.com/pushshift/api">Pushshit API</a></p>
+<blockquote>
+<p><strong>NOTE:</strong> Using the Pushshift API for this volume takes a very
+long time. It is recommended that only a single subreddit is used
+(edit the python script)</p>
+</blockquote>
+<p><code>bash
+poetry run python -m src.processing.reddit_api.py</code></p>
+</li>
+<li>
+<p>Run inference using model checkpoints</p>
+<p><code>bash
+python -m src.inf</code></p>
+</li>
+</ol>
+<h2 id="docker">Docker</h2>
+<blockquote>
+<p><strong>NOTE:</strong> Run as an alternative to locally installing poetry</p>
+</blockquote>
+<h4 id="build-from-dockerfile">Build from Dockerfile</h4>
+<pre><code class="language-bash">docker build . -t cjber/georelations
+</code></pre>
+<h4 id="run-with-volume-mapped-on-gpu">Run with volume mapped on GPU</h4>
+<pre><code class="language-bash">docker run --rm --gpus all -v ${PWD}/ckpts:/georelations/ckpts -v ${PWD}/csv_logs:/georelations/csv_logs cjber/georelations
+</code></pre>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;
+
+.. include:: ../README.md
+&#34;&#34;&#34;</code></pre>
+</details>
 </section>
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
@@ -46,6 +193,10 @@
 <dd>
 <div class="desc"></div>
 </dd>
+<dt><code class="name"><a title="src.run" href="run.html">src.run</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 </dl>
 </section>
 <section>
@@ -58,7 +209,24 @@
 <nav id="sidebar">
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#description">Description</a></li>
+<li><a href="#project-layout">Project layout</a></li>
+<li><a href="#how-to-run">How to run</a><ul>
+<li><a href="#build-poetry-environment">Build poetry environment</a><ul>
+<li><a href="#train-entity-recognition-model-using-wnut17">Train entity recognition model using WNUT17:</a></li>
+<li><a href="#train-relationship-classification-model-using-nyt-h-corpus">Train relationship classification model using NYT-H corpus.</a></li>
+<li><a href="#run-inference">Run inference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#docker">Docker</a><ul>
+<li><a href="#build-from-dockerfile">Build from Dockerfile</a></li>
+<li><a href="#run-with-volume-mapped-on-gpu">Run with volume mapped on GPU</a></li>
+</ul>
+</li>
+</ul>
 </div>
 <ul id="index">
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
@@ -68,6 +236,7 @@
 <li><code><a title="src.pl_metric" href="pl_metric/index.html">src.pl_metric</a></code></li>
 <li><code><a title="src.pl_module" href="pl_module/index.html">src.pl_module</a></code></li>
 <li><code><a title="src.processing" href="processing/index.html">src.processing</a></code></li>
+<li><code><a title="src.run" href="run.html">src.run</a></code></li>
 </ul>
 </li>
 </ul>

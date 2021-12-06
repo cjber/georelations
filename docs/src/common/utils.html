@@ -249,7 +249,8 @@ def combine_biluo(tokens: list[str], tags: list[str]) -&gt; tuple[list[str], lis
     tuple[list[str], list[str]]:
         Tokens and tags with BILUO removed.
 
-    Example:
+    Example
+    -------
 
     &gt;&gt;&gt; tokens = [&#39;New&#39;, &#39;York&#39;, &#39;City&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
     &gt;&gt;&gt; tags = [&#39;B-PLACE&#39;, &#39;I-PLACE&#39;, &#39;L-City&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
@@ -302,7 +303,8 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -&gt; Union[list[str],
     Union[list[str], None]
         List of strings with head and tail annotations.
 
-    Example:
+    Example
+    -------
 
     &gt;&gt;&gt; tokens = [&#39;New York&#39;, &#39;is&#39;, &#39;in&#39;, &#39;New York&#39;, &#39;,&#39;, &#39;America&#39;]
     &gt;&gt;&gt; tags = [&#39;PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;PLACE&#39;, &#39;O&#39;, &#39;PLACE&#39;]
@@ -426,9 +428,8 @@ if __name__ == &#34;__main__&#34;:
 <dl>
 <dt><code>tuple[list[str], list[str]]:</code></dt>
 <dd>Tokens and tags with BILUO removed.</dd>
-<dt><code>Example:</code></dt>
-<dd>&nbsp;</dd>
 </dl>
+<h2 id="example">Example</h2>
 <pre><code class="language-python-repl">&gt;&gt;&gt; tokens = ['New', 'York', 'City', 'is', 'big', '.']
 &gt;&gt;&gt; tags = ['B-PLACE', 'I-PLACE', 'L-City', 'O', 'O', 'O']
 &gt;&gt;&gt; tokens, tags = combine_biluo(tokens, tags)
@@ -458,7 +459,8 @@ if __name__ == &#34;__main__&#34;:
     tuple[list[str], list[str]]:
         Tokens and tags with BILUO removed.
 
-    Example:
+    Example
+    -------
 
     &gt;&gt;&gt; tokens = [&#39;New&#39;, &#39;York&#39;, &#39;City&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
     &gt;&gt;&gt; tags = [&#39;B-PLACE&#39;, &#39;I-PLACE&#39;, &#39;L-City&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
@@ -782,9 +784,8 @@ used by the NYT corpus.</p>
 <dl>
 <dt><code>Union[list[str], None]</code></dt>
 <dd>List of strings with head and tail annotations.</dd>
-<dt><code>Example:</code></dt>
-<dd>&nbsp;</dd>
 </dl>
+<h2 id="example">Example</h2>
 <pre><code class="language-python-repl">&gt;&gt;&gt; tokens = ['New York', 'is', 'in', 'New York', ',', 'America']
 &gt;&gt;&gt; tags = ['PLACE', 'O', 'O', 'PLACE', 'O', 'PLACE']
 </code></pre>
@@ -814,7 +815,8 @@ used by the NYT corpus.</p>
     Union[list[str], None]
         List of strings with head and tail annotations.
 
-    Example:
+    Example
+    -------
 
     &gt;&gt;&gt; tokens = [&#39;New York&#39;, &#39;is&#39;, &#39;in&#39;, &#39;New York&#39;, &#39;,&#39;, &#39;America&#39;]
     &gt;&gt;&gt; tags = [&#39;PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;PLACE&#39;, &#39;O&#39;, &#39;PLACE&#39;]
