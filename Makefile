@@ -29,8 +29,13 @@ lint:
 
 run:
 ## run: Train ger and rel model over 5 fixed seeds.
-	${PYTHON} -m src.run --model ger --seed ${SEEDS} --batch_size 4 \
-	&& ${PYTHON} -m src.run --model rel --seed ${SEEDS}
+	poetry run ${PYTHON} --model ger --seed ${SEEDS} --batch_size 4 \
+	&& poetry run ${PYTHON} -m src.run --model rel --seed ${SEEDS}
+
+dev:
+## dev: Test ger and rel models train.
+	poetry run ${PYTHON} -m src.run --model ger --fast_dev_run True \
+	&& poetry run ${PYTHON} -m src.run --model rel --fast_dev_run True
 
 help:
 ## help: This helpful list of commands
