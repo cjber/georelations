@@ -28,6 +28,17 @@ parser.add_argument("--save_to_hub", type=str)
 
 args, unknown = parser.parse_known_args()
 
+REL_DATA = (
+    DATA_DIR / "rel_data" / "relations.csv"
+    if not args.fast_dev_run
+    else "tests/toy_data/train_rel.csv"
+)
+REL_DATA_TEST = (
+    DATA_DIR / "rel_data" / "relations_test.csv"
+    if not args.fast_dev_run
+    else "tests/toy_data/train_rel.csv"
+)
+
 
 def build_callbacks() -> list[Callback]:
     callbacks: list[Callback] = [
@@ -128,8 +139,8 @@ if __name__ == "__main__":
                     dataset=RELDataset,
                     pl_model=RBERT,
                     name="rel",
-                    path=DATA_DIR / "rel_data" / "relations.csv",
-                    test_path=DATA_DIR / "rel_data" / "relations_test.csv",
+                    path=REL_DATA,
+                    test_path=REL_DATA_TEST,
                     seed=seed,
                 )
     elif args.model == "ger":
@@ -146,8 +157,8 @@ if __name__ == "__main__":
             dataset=RELDataset,
             pl_model=RBERT,
             name="rel",
-            path=DATA_DIR / "rel_data" / "relations.csv",
-            test_path=DATA_DIR / "rel_data" / "relations_test.csv",
+            path=REL_DATA,
+            test_path=REL_DATA_TEST,
             seed=args.seed[0],
         )
     else:
