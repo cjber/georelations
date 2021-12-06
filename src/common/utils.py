@@ -221,7 +221,8 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
     tuple[list[str], list[str]]:
         Tokens and tags with BILUO removed.
 
-    Example:
+    Example
+    -------
 
     >>> tokens = ['New', 'York', 'City', 'is', 'big', '.']
     >>> tags = ['B-PLACE', 'I-PLACE', 'L-City', 'O', 'O', 'O']
@@ -274,7 +275,8 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], No
     Union[list[str], None]
         List of strings with head and tail annotations.
 
-    Example:
+    Example
+    -------
 
     >>> tokens = ['New York', 'is', 'in', 'New York', ',', 'America']
     >>> tags = ['PLACE', 'O', 'O', 'PLACE', 'O', 'PLACE']

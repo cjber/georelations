@@ -26,7 +26,7 @@ parser.add_argument("--seed", nargs="+", type=int, default=[42])
 parser.add_argument("--model", type=str)
 parser.add_argument("--save_to_hub", type=str)
 
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 
 
 def build_callbacks() -> list[Callback]:
