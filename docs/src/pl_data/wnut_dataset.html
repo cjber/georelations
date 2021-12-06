@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>pl_data.conll03_dataset API documentation</title>
+<title>src.pl_data.wnut_dataset API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pl_data.conll03_dataset</code></h1>
+<h1 class="title">Module <code>src.pl_data.wnut_dataset</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -27,85 +27,75 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import torch
-from datasets.arrow_dataset import concatenate_datasets
+from datasets import concatenate_datasets
 from datasets.load import load_dataset
 from ekphrasis.classes.preprocessor import TextPreProcessor
-from ekphrasis.classes.tokenizer import SocialTokenizer
-from ekphrasis.dicts.emoticons import emoticons
 from pathlib import Path
-from src.common.utils import Const, encode_labels
+from spacy.training.iob_utils import iob_to_biluo
+from src.common.utils import Const, Label, encode_labels
 from torch.utils.data import Dataset
 from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers.tokenization_utils import PreTrainedTokenizer
 from typing import Union
 
-text_processor = TextPreProcessor(
-    normalize=[
-        &#34;url&#34;,
-        &#34;email&#34;,
-        &#34;percent&#34;,
-        &#34;money&#34;,
-        &#34;phone&#34;,
-        &#34;user&#34;,
-        &#34;time&#34;,
-        &#34;url&#34;,
-        &#34;date&#34;,
-        &#34;number&#34;,
-    ],
-    annotate={&#34;hashtag&#34;},
-    fix_html=True,
-    segmenter=&#34;twitter&#34;,
-    corrector=&#34;twitter&#34;,
-    unpack_hashtags=True,
-    unpack_contractions=True,
-    spell_correct_elong=False,
-    tokenizer=SocialTokenizer(lowercase=False).tokenize,
-    dicts=[emoticons],
-)
 
-
-class CoNLL03Dataset(Dataset):
-    def __init__(self, path: Union[Path, str], tokenizer=AutoTokenizer):
+class WNUTDataset(Dataset[dict[str, torch.Tensor]]):
+    def __init__(
+        self,
+        path: Union[Path, str],
+        tokenizer: PreTrainedTokenizer = AutoTokenizer,  # type: ignore
+    ) -&gt; None:
         super().__init__()
-        self.model_name = Const.MODEL_NAME
-        self.max_token_len = Const.MAX_TOKEN_LEN
+        self.tokenizer = tokenizer.from_pretrained(
+            Const.MODEL_NAME, add_prefix_space=True
+        )
+        self.tokenizer.add_special_tokens(
+            {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
+        )
+        self.text_processor = TextPreProcessor(**Const.TEXT_PROCESSOR_ARGS)
 
         if path == &#34;train&#34;:
             wnut = load_dataset(
-                &#34;wnut_17&#34;, split={&#34;train&#34;: &#34;train&#34;, &#34;validation&#34;: &#34;validation&#34;}
+                &#34;wnut_17&#34;, split={&#34;train&#34;: &#34;train&#34;, &#34;validation&#34;: &#34;validation&#34;}  # type: ignore
             )
-            wnut = concatenate_datasets([wnut[&#34;train&#34;], wnut[&#34;validation&#34;]])
+            wnut = concatenate_datasets([wnut[&#34;train&#34;], wnut[&#34;validation&#34;]])  # type: ignore
         elif path == &#34;test&#34;:
             wnut = load_dataset(&#34;wnut_17&#34;, split=&#34;test&#34;)
         else:
             raise ValueError
-
-        self.data = wnut.map(self.use_loc).map(self.normalise)
-        self.tokenizer = tokenizer.from_pretrained(
-            self.model_name, add_prefix_space=True
+        wnut = wnut.map(self.use_loc).map(self.normalise).map(self.to_biluo)  # type: ignore
+        locs = wnut.filter(
+            lambda example: any(x in [1, 4] for x in example[&#34;ner_tags&#34;])
         )
+        # reduce imbalance by keeping 1/8 of sentences w/o locations
+        all_other = wnut.filter(
+            lambda example: all(x not in [1, 4] for x in example[&#34;ner_tags&#34;])
+        ).shard(  # type: ignore
+            8, 0
+        )
+        self.data = concatenate_datasets([locs, all_other])  # type: ignore
 
     def __len__(self) -&gt; int:
         return len(self.data)
 
-    def __getitem__(self, index: int):
-        idx = self.data[index]
-        tokens = idx[&#34;tokens&#34;]
-        tags = idx[&#34;ner_tags&#34;]
+    def __getitem__(self, index: int) -&gt; dict[str, torch.Tensor]:
+        idx: dict[str, list] = self.data[index]
 
         encoding, labels_encoded = encode_labels(
-            tokens,
-            tags,
+            idx[&#34;tokens&#34;],
+            idx[&#34;ner_tags&#34;],
             self.tokenizer,
-            self.max_token_len,
-        )
-        return dict(
-            input_ids=encoding[&#34;input_ids&#34;].flatten(),
-            attention_mask=encoding[&#34;attention_mask&#34;].flatten(),
-            labels=torch.LongTensor(labels_encoded).flatten(),
+            Const.MAX_TOKEN_LEN,
         )
 
+        return {
+            &#34;input_ids&#34;: encoding[&#34;input_ids&#34;].flatten(),
+            &#34;attention_mask&#34;: encoding[&#34;attention_mask&#34;].flatten(),
+            &#34;labels&#34;: labels_encoded,
+        }
+
     @staticmethod
-    def use_loc(example):
+    def use_loc(example: dict[str, list[int]]) -&gt; dict[str, list[int]]:
         new_tags = []
         for tag in example[&#34;ner_tags&#34;]:
             if tag == 7:
@@ -118,12 +108,18 @@ class CoNLL03Dataset(Dataset):
         example[&#34;ner_tags&#34;] = new_tags
         return example
 
-    @staticmethod
-    def normalise(wnut):
-        wnut[&#34;tokens&#34;] = [
-            &#34;&#34;.join(text_processor.pre_process_doc(word)) for word in wnut[&#34;tokens&#34;]
+    def normalise(self, example: dict[str, list[str]]) -&gt; dict[str, list[str]]:
+        example[&#34;tokens&#34;] = [
+            &#34;&#34;.join(self.text_processor.pre_process_doc(word))
+            for word in example[&#34;tokens&#34;]
         ]
-        return wnut</code></pre>
+        return example
+
+    @staticmethod
+    def to_biluo(example: dict[str, list[int]]) -&gt; dict[str, list[int]]:
+        tags = [Label(&#34;GER&#34;).idx[tag] for tag in example[&#34;ner_tags&#34;]]
+        example[&#34;ner_tags&#34;] = [Label(&#34;GER&#34;).labels[tag] for tag in iob_to_biluo(tags)]
+        return example</code></pre>
 </details>
 </section>
 <section>
@@ -135,9 +131,9 @@ class CoNLL03Dataset(Dataset):
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pl_data.conll03_dataset.CoNLL03Dataset"><code class="flex name class">
-<span>class <span class="ident">CoNLL03Dataset</span></span>
-<span>(</span><span>path: Union[pathlib.Path, str], tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
+<dt id="src.pl_data.wnut_dataset.WNUTDataset"><code class="flex name class">
+<span>class <span class="ident">WNUTDataset</span></span>
+<span>(</span><span>path: Union[pathlib.Path, str], tokenizer: transformers.tokenization_utils.PreTrainedTokenizer = transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>An abstract class representing a :class:<code>Dataset</code>.</p>
@@ -158,49 +154,63 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class CoNLL03Dataset(Dataset):
-    def __init__(self, path: Union[Path, str], tokenizer=AutoTokenizer):
+<pre><code class="python">class WNUTDataset(Dataset[dict[str, torch.Tensor]]):
+    def __init__(
+        self,
+        path: Union[Path, str],
+        tokenizer: PreTrainedTokenizer = AutoTokenizer,  # type: ignore
+    ) -&gt; None:
         super().__init__()
-        self.model_name = Const.MODEL_NAME
-        self.max_token_len = Const.MAX_TOKEN_LEN
+        self.tokenizer = tokenizer.from_pretrained(
+            Const.MODEL_NAME, add_prefix_space=True
+        )
+        self.tokenizer.add_special_tokens(
+            {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
+        )
+        self.text_processor = TextPreProcessor(**Const.TEXT_PROCESSOR_ARGS)
 
         if path == &#34;train&#34;:
             wnut = load_dataset(
-                &#34;wnut_17&#34;, split={&#34;train&#34;: &#34;train&#34;, &#34;validation&#34;: &#34;validation&#34;}
+                &#34;wnut_17&#34;, split={&#34;train&#34;: &#34;train&#34;, &#34;validation&#34;: &#34;validation&#34;}  # type: ignore
             )
-            wnut = concatenate_datasets([wnut[&#34;train&#34;], wnut[&#34;validation&#34;]])
+            wnut = concatenate_datasets([wnut[&#34;train&#34;], wnut[&#34;validation&#34;]])  # type: ignore
         elif path == &#34;test&#34;:
             wnut = load_dataset(&#34;wnut_17&#34;, split=&#34;test&#34;)
         else:
             raise ValueError
-
-        self.data = wnut.map(self.use_loc).map(self.normalise)
-        self.tokenizer = tokenizer.from_pretrained(
-            self.model_name, add_prefix_space=True
+        wnut = wnut.map(self.use_loc).map(self.normalise).map(self.to_biluo)  # type: ignore
+        locs = wnut.filter(
+            lambda example: any(x in [1, 4] for x in example[&#34;ner_tags&#34;])
         )
+        # reduce imbalance by keeping 1/8 of sentences w/o locations
+        all_other = wnut.filter(
+            lambda example: all(x not in [1, 4] for x in example[&#34;ner_tags&#34;])
+        ).shard(  # type: ignore
+            8, 0
+        )
+        self.data = concatenate_datasets([locs, all_other])  # type: ignore
 
     def __len__(self) -&gt; int:
         return len(self.data)
 
-    def __getitem__(self, index: int):
-        idx = self.data[index]
-        tokens = idx[&#34;tokens&#34;]
-        tags = idx[&#34;ner_tags&#34;]
+    def __getitem__(self, index: int) -&gt; dict[str, torch.Tensor]:
+        idx: dict[str, list] = self.data[index]
 
         encoding, labels_encoded = encode_labels(
-            tokens,
-            tags,
+            idx[&#34;tokens&#34;],
+            idx[&#34;ner_tags&#34;],
             self.tokenizer,
-            self.max_token_len,
-        )
-        return dict(
-            input_ids=encoding[&#34;input_ids&#34;].flatten(),
-            attention_mask=encoding[&#34;attention_mask&#34;].flatten(),
-            labels=torch.LongTensor(labels_encoded).flatten(),
+            Const.MAX_TOKEN_LEN,
         )
 
+        return {
+            &#34;input_ids&#34;: encoding[&#34;input_ids&#34;].flatten(),
+            &#34;attention_mask&#34;: encoding[&#34;attention_mask&#34;].flatten(),
+            &#34;labels&#34;: labels_encoded,
+        }
+
     @staticmethod
-    def use_loc(example):
+    def use_loc(example: dict[str, list[int]]) -&gt; dict[str, list[int]]:
         new_tags = []
         for tag in example[&#34;ner_tags&#34;]:
             if tag == 7:
@@ -213,22 +223,35 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
         example[&#34;ner_tags&#34;] = new_tags
         return example
 
-    @staticmethod
-    def normalise(wnut):
-        wnut[&#34;tokens&#34;] = [
-            &#34;&#34;.join(text_processor.pre_process_doc(word)) for word in wnut[&#34;tokens&#34;]
+    def normalise(self, example: dict[str, list[str]]) -&gt; dict[str, list[str]]:
+        example[&#34;tokens&#34;] = [
+            &#34;&#34;.join(self.text_processor.pre_process_doc(word))
+            for word in example[&#34;tokens&#34;]
         ]
-        return wnut</code></pre>
+        return example
+
+    @staticmethod
+    def to_biluo(example: dict[str, list[int]]) -&gt; dict[str, list[int]]:
+        tags = [Label(&#34;GER&#34;).idx[tag] for tag in example[&#34;ner_tags&#34;]]
+        example[&#34;ner_tags&#34;] = [Label(&#34;GER&#34;).labels[tag] for tag in iob_to_biluo(tags)]
+        return example</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li>torch.utils.data.dataset.Dataset</li>
 <li>typing.Generic</li>
 </ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="src.pl_data.wnut_dataset.WNUTDataset.functions"><code class="name">var <span class="ident">functions</span> : Dict[str, Callable]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
 <h3>Static methods</h3>
 <dl>
-<dt id="pl_data.conll03_dataset.CoNLL03Dataset.normalise"><code class="name flex">
-<span>def <span class="ident">normalise</span></span>(<span>wnut)</span>
+<dt id="src.pl_data.wnut_dataset.WNUTDataset.to_biluo"><code class="name flex">
+<span>def <span class="ident">to_biluo</span></span>(<span>example: dict) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -237,15 +260,14 @@ dataset with non-integral indices/keys, a custom sampler must be provided.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@staticmethod
-def normalise(wnut):
-    wnut[&#34;tokens&#34;] = [
-        &#34;&#34;.join(text_processor.pre_process_doc(word)) for word in wnut[&#34;tokens&#34;]
-    ]
-    return wnut</code></pre>
+def to_biluo(example: dict[str, list[int]]) -&gt; dict[str, list[int]]:
+    tags = [Label(&#34;GER&#34;).idx[tag] for tag in example[&#34;ner_tags&#34;]]
+    example[&#34;ner_tags&#34;] = [Label(&#34;GER&#34;).labels[tag] for tag in iob_to_biluo(tags)]
+    return example</code></pre>
 </details>
 </dd>
-<dt id="pl_data.conll03_dataset.CoNLL03Dataset.use_loc"><code class="name flex">
-<span>def <span class="ident">use_loc</span></span>(<span>example)</span>
+<dt id="src.pl_data.wnut_dataset.WNUTDataset.use_loc"><code class="name flex">
+<span>def <span class="ident">use_loc</span></span>(<span>example: dict) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -254,7 +276,7 @@ def normalise(wnut):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@staticmethod
-def use_loc(example):
+def use_loc(example: dict[str, list[int]]) -&gt; dict[str, list[int]]:
     new_tags = []
     for tag in example[&#34;ner_tags&#34;]:
         if tag == 7:
@@ -265,6 +287,26 @@ def use_loc(example):
             new_tag = 0
         new_tags.append(new_tag)
     example[&#34;ner_tags&#34;] = new_tags
+    return example</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="src.pl_data.wnut_dataset.WNUTDataset.normalise"><code class="name flex">
+<span>def <span class="ident">normalise</span></span>(<span>self, example: dict) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def normalise(self, example: dict[str, list[str]]) -&gt; dict[str, list[str]]:
+    example[&#34;tokens&#34;] = [
+        &#34;&#34;.join(self.text_processor.pre_process_doc(word))
+        for word in example[&#34;tokens&#34;]
+    ]
     return example</code></pre>
 </details>
 </dd>
@@ -281,16 +323,18 @@ def use_loc(example):
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pl_data" href="index.html">pl_data</a></code></li>
+<li><code><a title="src.pl_data" href="index.html">src.pl_data</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pl_data.conll03_dataset.CoNLL03Dataset" href="#pl_data.conll03_dataset.CoNLL03Dataset">CoNLL03Dataset</a></code></h4>
+<h4><code><a title="src.pl_data.wnut_dataset.WNUTDataset" href="#src.pl_data.wnut_dataset.WNUTDataset">WNUTDataset</a></code></h4>
 <ul class="">
-<li><code><a title="pl_data.conll03_dataset.CoNLL03Dataset.normalise" href="#pl_data.conll03_dataset.CoNLL03Dataset.normalise">normalise</a></code></li>
-<li><code><a title="pl_data.conll03_dataset.CoNLL03Dataset.use_loc" href="#pl_data.conll03_dataset.CoNLL03Dataset.use_loc">use_loc</a></code></li>
+<li><code><a title="src.pl_data.wnut_dataset.WNUTDataset.functions" href="#src.pl_data.wnut_dataset.WNUTDataset.functions">functions</a></code></li>
+<li><code><a title="src.pl_data.wnut_dataset.WNUTDataset.normalise" href="#src.pl_data.wnut_dataset.WNUTDataset.normalise">normalise</a></code></li>
+<li><code><a title="src.pl_data.wnut_dataset.WNUTDataset.to_biluo" href="#src.pl_data.wnut_dataset.WNUTDataset.to_biluo">to_biluo</a></code></li>
+<li><code><a title="src.pl_data.wnut_dataset.WNUTDataset.use_loc" href="#src.pl_data.wnut_dataset.WNUTDataset.use_loc">use_loc</a></code></li>
 </ul>
 </li>
 </ul>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>pl_modules.ensemble API documentation</title>
+<title>src.pl_module.ensemble API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pl_modules.ensemble</code></h1>
+<h1 class="title">Module <code>src.pl_module.ensemble</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -28,66 +28,72 @@
 </summary>
 <pre><code class="python">import itertools
 import pytorch_lightning as pl
-from src.common.utils import (
-    Const,
-    Label,
-    convert_examples_to_features,
-    ents_to_relations,
-)
-from transformers.models.auto.tokenization_auto import AutoTokenizer
+import torch
+from src.common.utils import Const, Label, convert_input, ents_to_relations
+from transformers import AutoTokenizer
 
 
 class RelationEnsemble(pl.LightningModule):
     def __init__(
-        self, ger_model, rel_model, tokenizer=AutoTokenizer, *args, **kwargs
+        self,
+        ger_model: pl.LightningModule,
+        rel_model: pl.LightningModule,
+        tokenizer=AutoTokenizer,
     ) -&gt; None:
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.ger_model = ger_model
         self.rel_model = rel_model
 
-        self.tokenizer = tokenizer.from_pretrained(self.ger_model.model_name)
+        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
         self.tokenizer.add_special_tokens(
             {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
         )
 
-    def forward(self, input_ids, attention_mask, labels=None):
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        labels=None,
+    ) -&gt; list[tuple]:
         ger_out: dict = self.ger_model(
             input_ids=input_ids, attention_mask=attention_mask, labels=labels
         )
 
-        sequence_list = [
+        sequence: list = [
             ents_to_relations(item[&#34;tokens&#34;], item[&#34;tags&#34;]) for item in ger_out
         ]
-        sequence_list = list(
-            itertools.chain.from_iterable([s for s in sequence_list if s])
-        )
+        sequence = list(itertools.chain.from_iterable([s for s in sequence if s]))
 
         output = []
-        if sequence_list:
-            for item in sequence_list:
-                assert all(
-                    x in item for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]
-                )
-                assert all(x not in item for x in [&#34;&lt;head&gt;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&lt;/tail&gt;&#34;])
-                features = convert_examples_to_features(
+        if sequence:
+            for text in sequence:
+                if any(
+                    x not in text for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]
+                ):
+                    continue
+                item = {}
+                item[&#34;sentence&#34;] = text
+
+                features = convert_input(
                     item,
                     max_seq_len=Const.MAX_TOKEN_LEN,
                     tokenizer=self.tokenizer,
-                    labels=False,
                 )
 
-                rel_out = self.rel_model(
-                    features[&#34;input_ids&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                    features[&#34;attention_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                    features[&#34;labels&#34;],
-                    features[&#34;e1_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                    features[&#34;e2_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                )
+                # truncation may remove tail/head so ignore
+                if features:
+                    rel_out = self.rel_model(
+                        features[&#34;input_ids&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                        features[&#34;attention_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                        features[&#34;labels&#34;],
+                        features[&#34;e1_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                        features[&#34;e2_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                    )
 
-                output.append(
-                    (item, Label(&#34;REL&#34;).idx[rel_out[0].argmax(dim=1)[0].tolist()])
-                )
+                    output.append(
+                        (item, Label(&#34;REL&#34;).idx[rel_out[0].argmax(dim=1)[0].tolist()])
+                    )
         return output</code></pre>
 </details>
 </section>
@@ -100,77 +106,84 @@ class RelationEnsemble(pl.LightningModule):
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pl_modules.ensemble.RelationEnsemble"><code class="flex name class">
+<dt id="src.pl_module.ensemble.RelationEnsemble"><code class="flex name class">
 <span>class <span class="ident">RelationEnsemble</span></span>
-<span>(</span><span>ger_model, rel_model, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer, *args, **kwargs)</span>
+<span>(</span><span>ger_model: pytorch_lightning.core.lightning.LightningModule, rel_model: pytorch_lightning.core.lightning.LightningModule, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Helper class that provides a standard way to create an ABC using
-inheritance.</p></div>
+<div class="desc"><p>Hooks to be used in LightningModule.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class RelationEnsemble(pl.LightningModule):
     def __init__(
-        self, ger_model, rel_model, tokenizer=AutoTokenizer, *args, **kwargs
+        self,
+        ger_model: pl.LightningModule,
+        rel_model: pl.LightningModule,
+        tokenizer=AutoTokenizer,
     ) -&gt; None:
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.ger_model = ger_model
         self.rel_model = rel_model
 
-        self.tokenizer = tokenizer.from_pretrained(self.ger_model.model_name)
+        self.tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
         self.tokenizer.add_special_tokens(
             {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
         )
 
-    def forward(self, input_ids, attention_mask, labels=None):
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        labels=None,
+    ) -&gt; list[tuple]:
         ger_out: dict = self.ger_model(
             input_ids=input_ids, attention_mask=attention_mask, labels=labels
         )
 
-        sequence_list = [
+        sequence: list = [
             ents_to_relations(item[&#34;tokens&#34;], item[&#34;tags&#34;]) for item in ger_out
         ]
-        sequence_list = list(
-            itertools.chain.from_iterable([s for s in sequence_list if s])
-        )
+        sequence = list(itertools.chain.from_iterable([s for s in sequence if s]))
 
         output = []
-        if sequence_list:
-            for item in sequence_list:
-                assert all(
-                    x in item for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]
-                )
-                assert all(x not in item for x in [&#34;&lt;head&gt;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&lt;/tail&gt;&#34;])
-                features = convert_examples_to_features(
+        if sequence:
+            for text in sequence:
+                if any(
+                    x not in text for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]
+                ):
+                    continue
+                item = {}
+                item[&#34;sentence&#34;] = text
+
+                features = convert_input(
                     item,
                     max_seq_len=Const.MAX_TOKEN_LEN,
                     tokenizer=self.tokenizer,
-                    labels=False,
                 )
 
-                rel_out = self.rel_model(
-                    features[&#34;input_ids&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                    features[&#34;attention_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                    features[&#34;labels&#34;],
-                    features[&#34;e1_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                    features[&#34;e2_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                )
+                # truncation may remove tail/head so ignore
+                if features:
+                    rel_out = self.rel_model(
+                        features[&#34;input_ids&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                        features[&#34;attention_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                        features[&#34;labels&#34;],
+                        features[&#34;e1_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                        features[&#34;e2_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                    )
 
-                output.append(
-                    (item, Label(&#34;REL&#34;).idx[rel_out[0].argmax(dim=1)[0].tolist()])
-                )
+                    output.append(
+                        (item, Label(&#34;REL&#34;).idx[rel_out[0].argmax(dim=1)[0].tolist()])
+                    )
         return output</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li>pytorch_lightning.core.lightning.LightningModule</li>
-<li>abc.ABC</li>
 <li>pytorch_lightning.core.mixins.device_dtype_mixin.DeviceDtypeModuleMixin</li>
 <li>pytorch_lightning.core.mixins.hparams_mixin.HyperparametersMixin</li>
-<li>pytorch_lightning.core.grads.GradInformation</li>
 <li>pytorch_lightning.core.saving.ModelIO</li>
 <li>pytorch_lightning.core.hooks.ModelHooks</li>
 <li>pytorch_lightning.core.hooks.DataHooks</li>
@@ -179,19 +192,19 @@ inheritance.</p></div>
 </ul>
 <h3>Class variables</h3>
 <dl>
-<dt id="pl_modules.ensemble.RelationEnsemble.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
+<dt id="src.pl_module.ensemble.RelationEnsemble.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="pl_modules.ensemble.RelationEnsemble.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
+<dt id="src.pl_module.ensemble.RelationEnsemble.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pl_modules.ensemble.RelationEnsemble.forward"><code class="name flex">
-<span>def <span class="ident">forward</span></span>(<span>self, input_ids, attention_mask, labels=None) ‑> Callable[..., Any]</span>
+<dt id="src.pl_module.ensemble.RelationEnsemble.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, input_ids: torch.Tensor, attention_mask: torch.Tensor, labels=None) ‑> list</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Same as :meth:<code>torch.nn.Module.forward()</code>.</p>
@@ -208,43 +221,50 @@ inheritance.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def forward(self, input_ids, attention_mask, labels=None):
+<pre><code class="python">def forward(
+    self,
+    input_ids: torch.Tensor,
+    attention_mask: torch.Tensor,
+    labels=None,
+) -&gt; list[tuple]:
     ger_out: dict = self.ger_model(
         input_ids=input_ids, attention_mask=attention_mask, labels=labels
     )
 
-    sequence_list = [
+    sequence: list = [
         ents_to_relations(item[&#34;tokens&#34;], item[&#34;tags&#34;]) for item in ger_out
     ]
-    sequence_list = list(
-        itertools.chain.from_iterable([s for s in sequence_list if s])
-    )
+    sequence = list(itertools.chain.from_iterable([s for s in sequence if s]))
 
     output = []
-    if sequence_list:
-        for item in sequence_list:
-            assert all(
-                x in item for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]
-            )
-            assert all(x not in item for x in [&#34;&lt;head&gt;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&lt;/tail&gt;&#34;])
-            features = convert_examples_to_features(
+    if sequence:
+        for text in sequence:
+            if any(
+                x not in text for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]
+            ):
+                continue
+            item = {}
+            item[&#34;sentence&#34;] = text
+
+            features = convert_input(
                 item,
                 max_seq_len=Const.MAX_TOKEN_LEN,
                 tokenizer=self.tokenizer,
-                labels=False,
             )
 
-            rel_out = self.rel_model(
-                features[&#34;input_ids&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                features[&#34;attention_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                features[&#34;labels&#34;],
-                features[&#34;e1_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-                features[&#34;e2_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
-            )
+            # truncation may remove tail/head so ignore
+            if features:
+                rel_out = self.rel_model(
+                    features[&#34;input_ids&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                    features[&#34;attention_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                    features[&#34;labels&#34;],
+                    features[&#34;e1_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                    features[&#34;e2_mask&#34;].unsqueeze(0).to(&#34;cuda&#34;),
+                )
 
-            output.append(
-                (item, Label(&#34;REL&#34;).idx[rel_out[0].argmax(dim=1)[0].tolist()])
-            )
+                output.append(
+                    (item, Label(&#34;REL&#34;).idx[rel_out[0].argmax(dim=1)[0].tolist()])
+                )
     return output</code></pre>
 </details>
 </dd>
@@ -261,17 +281,17 @@ inheritance.</p></div>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pl_modules" href="index.html">pl_modules</a></code></li>
+<li><code><a title="src.pl_module" href="index.html">src.pl_module</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pl_modules.ensemble.RelationEnsemble" href="#pl_modules.ensemble.RelationEnsemble">RelationEnsemble</a></code></h4>
+<h4><code><a title="src.pl_module.ensemble.RelationEnsemble" href="#src.pl_module.ensemble.RelationEnsemble">RelationEnsemble</a></code></h4>
 <ul class="">
-<li><code><a title="pl_modules.ensemble.RelationEnsemble.dump_patches" href="#pl_modules.ensemble.RelationEnsemble.dump_patches">dump_patches</a></code></li>
-<li><code><a title="pl_modules.ensemble.RelationEnsemble.forward" href="#pl_modules.ensemble.RelationEnsemble.forward">forward</a></code></li>
-<li><code><a title="pl_modules.ensemble.RelationEnsemble.training" href="#pl_modules.ensemble.RelationEnsemble.training">training</a></code></li>
+<li><code><a title="src.pl_module.ensemble.RelationEnsemble.dump_patches" href="#src.pl_module.ensemble.RelationEnsemble.dump_patches">dump_patches</a></code></li>
+<li><code><a title="src.pl_module.ensemble.RelationEnsemble.forward" href="#src.pl_module.ensemble.RelationEnsemble.forward">forward</a></code></li>
+<li><code><a title="src.pl_module.ensemble.RelationEnsemble.training" href="#src.pl_module.ensemble.RelationEnsemble.training">training</a></code></li>
 </ul>
 </li>
 </ul>

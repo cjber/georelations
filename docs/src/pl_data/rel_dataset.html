@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>pl_data API documentation</title>
+<title>src.pl_data.rel_dataset API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,40 +19,115 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Package <code>pl_data</code></h1>
+<h1 class="title">Module <code>src.pl_data.rel_dataset</code></h1>
 </header>
 <section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import os
+import pandas as pd
+from pathlib import Path
+from src.common.utils import Const, Label, convert_input
+from torch.utils.data import Dataset
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+from typing import Union
+
+os.environ[&#34;TOKENIZERS_PARALLELISM&#34;] = &#34;false&#34;
+
+
+class RELDataset(Dataset):
+    def __init__(self, path: Path, tokenizer=AutoTokenizer) -&gt; None:
+        super().__init__()
+        data: pd.DataFrame = pd.read_csv(path)
+        data[&#34;relation&#34;] = data[&#34;relation&#34;].apply(lambda x: Label(&#34;REL&#34;).labels[x])
+        tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
+        tokenizer.add_special_tokens(
+            {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
+        )
+
+        self.data: list[dict] = [
+            convert_input(row, Const.MAX_TOKEN_LEN, tokenizer)
+            for row in data.to_dict(orient=&#34;records&#34;)
+        ]
+        self.data = list(filter(None, self.data))
+
+    def __len__(self) -&gt; int:
+        return len(self.data)
+
+    def __getitem__(self, index: int) -&gt; Union[dict, None]:
+        return self.data[index]</code></pre>
+</details>
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt><code class="name"><a title="pl_data.conll03_dataset" href="conll03_dataset.html">pl_data.conll03_dataset</a></code></dt>
+<dt id="src.pl_data.rel_dataset.RELDataset"><code class="flex name class">
+<span>class <span class="ident">RELDataset</span></span>
+<span>(</span><span>path: pathlib.Path, tokenizer=transformers.models.auto.tokenization_auto.AutoTokenizer)</span>
+</code></dt>
 <dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pl_data.conll_dataset" href="conll_dataset.html">pl_data.conll_dataset</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pl_data.csv_dataset" href="csv_dataset.html">pl_data.csv_dataset</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pl_data.datamodule" href="datamodule.html">pl_data.datamodule</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pl_data.text_dataset" href="text_dataset.html">pl_data.text_dataset</a></code></dt>
+<div class="desc"><p>An abstract class representing a :class:<code>Dataset</code>.</p>
+<p>All datasets that represent a map from keys to data samples should subclass
+it. All subclasses should overwrite :meth:<code>__getitem__</code>, supporting fetching a
+data sample for a given key. Subclasses could also optionally overwrite
+:meth:<code>__len__</code>, which is expected to return the size of the dataset by many
+:class:<code>~torch.utils.data.Sampler</code> implementations and the default options
+of :class:<code>~torch.utils.data.DataLoader</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>:class:<code>~torch.utils.data.DataLoader</code> by default constructs a index
+sampler that yields integral indices.
+To make it work with a map-style
+dataset with non-integral indices/keys, a custom sampler must be provided.</p>
+</div></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class RELDataset(Dataset):
+    def __init__(self, path: Path, tokenizer=AutoTokenizer) -&gt; None:
+        super().__init__()
+        data: pd.DataFrame = pd.read_csv(path)
+        data[&#34;relation&#34;] = data[&#34;relation&#34;].apply(lambda x: Label(&#34;REL&#34;).labels[x])
+        tokenizer = tokenizer.from_pretrained(Const.MODEL_NAME)
+        tokenizer.add_special_tokens(
+            {&#34;additional_special_tokens&#34;: Const.SPECIAL_TOKENS}
+        )
+
+        self.data: list[dict] = [
+            convert_input(row, Const.MAX_TOKEN_LEN, tokenizer)
+            for row in data.to_dict(orient=&#34;records&#34;)
+        ]
+        self.data = list(filter(None, self.data))
+
+    def __len__(self) -&gt; int:
+        return len(self.data)
+
+    def __getitem__(self, index: int) -&gt; Union[dict, None]:
+        return self.data[index]</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>torch.utils.data.dataset.Dataset</li>
+<li>typing.Generic</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="src.pl_data.rel_dataset.RELDataset.functions"><code class="name">var <span class="ident">functions</span> : Dict[str, Callable]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
+</dd>
+</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -61,13 +136,19 @@
 <ul></ul>
 </div>
 <ul id="index">
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pl_data.conll03_dataset" href="conll03_dataset.html">pl_data.conll03_dataset</a></code></li>
-<li><code><a title="pl_data.conll_dataset" href="conll_dataset.html">pl_data.conll_dataset</a></code></li>
-<li><code><a title="pl_data.csv_dataset" href="csv_dataset.html">pl_data.csv_dataset</a></code></li>
-<li><code><a title="pl_data.datamodule" href="datamodule.html">pl_data.datamodule</a></code></li>
-<li><code><a title="pl_data.text_dataset" href="text_dataset.html">pl_data.text_dataset</a></code></li>
+<li><code><a title="src.pl_data" href="index.html">src.pl_data</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="src.pl_data.rel_dataset.RELDataset" href="#src.pl_data.rel_dataset.RELDataset">RELDataset</a></code></h4>
+<ul class="">
+<li><code><a title="src.pl_data.rel_dataset.RELDataset.functions" href="#src.pl_data.rel_dataset.RELDataset.functions">functions</a></code></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

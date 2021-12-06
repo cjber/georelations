@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>pl_metric.metric API documentation</title>
+<title>src.pl_metric.seqeval_f1 API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pl_metric.metric</code></h1>
+<h1 class="title">Module <code>src.pl_metric.seqeval_f1</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -27,14 +27,15 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import pandas as pd
-from seqeval.metrics import accuracy_score, classification_report
-from seqeval.scheme import BILOU, IOB2
+import torch
+from seqeval.metrics import classification_report
+from seqeval.scheme import BILOU
 from src.common.utils import Label
 from torchmetrics import Metric
 
 
 class Seqeval(Metric):
-    def __init__(self):
+    def __init__(self) -&gt; None:
         super().__init__()
 
         self.add_state(&#34;targets&#34;, default=[])
@@ -43,11 +44,11 @@ class Seqeval(Metric):
         self.targets = []
         self.preds = []
 
-    def update(self, preds, targets):
+    def update(self, preds: torch.Tensor, targets: torch.Tensor) -&gt; None:
         self.preds.append(preds.flatten())
         self.targets.append(targets.flatten())
 
-    def compute(self):
+    def compute(self) -&gt; dict:
         pred_bioul = []
         target_bioul = []
         for pred_seq, target_seq in zip(self.preds, self.targets):
@@ -55,9 +56,7 @@ class Seqeval(Metric):
             target_seq = target_seq.squeeze().cpu().numpy()
 
             true_labels_idx: list = [
-                idx
-                for idx, lab in enumerate(target_seq)
-                if lab != -100  # ignore special tags
+                idx for idx, lab in enumerate(target_seq) if lab != -100
             ]
 
             pred_bioul.append(
@@ -70,10 +69,10 @@ class Seqeval(Metric):
         report: dict = classification_report(
             y_true=target_bioul,
             y_pred=pred_bioul,
-            # mode=&#34;strict&#34;,
-            scheme=IOB2,
+            mode=&#34;strict&#34;,
+            scheme=BILOU,
             output_dict=True,
-            zero_division=1,  # no positive labels gives f1 of 0
+            zero_division=1,
         )  # type: ignore
 
         report.pop(&#34;macro avg&#34;)
@@ -83,11 +82,8 @@ class Seqeval(Metric):
         report[&#34;overall_precision&#34;] = overall_score[&#34;precision&#34;]
         report[&#34;overall_recall&#34;] = overall_score[&#34;recall&#34;]
         report[&#34;overall_f1&#34;] = overall_score[&#34;f1-score&#34;]
-        report[&#34;overall_accuracy&#34;] = accuracy_score(
-            y_true=target_bioul, y_pred=pred_bioul
-        )
 
-        return pd.json_normalize(report, sep=&#34;_&#34;).to_dict(orient=&#34;records&#34;)[0]</code></pre>
+        return pd.json_normalize(report, sep=&#34;_&#34;).to_dict(orient=&#34;records&#34;)[0]  # type: ignore</code></pre>
 </details>
 </section>
 <section>
@@ -99,7 +95,7 @@ class Seqeval(Metric):
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pl_metric.metric.Seqeval"><code class="flex name class">
+<dt id="src.pl_metric.seqeval_f1.Seqeval"><code class="flex name class">
 <span>class <span class="ident">Seqeval</span></span>
 </code></dt>
 <dd>
@@ -133,7 +129,7 @@ Initializes internal Module state, shared by both nn.Module and ScriptModule.</p
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Seqeval(Metric):
-    def __init__(self):
+    def __init__(self) -&gt; None:
         super().__init__()
 
         self.add_state(&#34;targets&#34;, default=[])
@@ -142,11 +138,11 @@ Initializes internal Module state, shared by both nn.Module and ScriptModule.</p
         self.targets = []
         self.preds = []
 
-    def update(self, preds, targets):
+    def update(self, preds: torch.Tensor, targets: torch.Tensor) -&gt; None:
         self.preds.append(preds.flatten())
         self.targets.append(targets.flatten())
 
-    def compute(self):
+    def compute(self) -&gt; dict:
         pred_bioul = []
         target_bioul = []
         for pred_seq, target_seq in zip(self.preds, self.targets):
@@ -154,9 +150,7 @@ Initializes internal Module state, shared by both nn.Module and ScriptModule.</p
             target_seq = target_seq.squeeze().cpu().numpy()
 
             true_labels_idx: list = [
-                idx
-                for idx, lab in enumerate(target_seq)
-                if lab != -100  # ignore special tags
+                idx for idx, lab in enumerate(target_seq) if lab != -100
             ]
 
             pred_bioul.append(
@@ -169,10 +163,10 @@ Initializes internal Module state, shared by both nn.Module and ScriptModule.</p
         report: dict = classification_report(
             y_true=target_bioul,
             y_pred=pred_bioul,
-            # mode=&#34;strict&#34;,
-            scheme=IOB2,
+            mode=&#34;strict&#34;,
+            scheme=BILOU,
             output_dict=True,
-            zero_division=1,  # no positive labels gives f1 of 0
+            zero_division=1,
         )  # type: ignore
 
         report.pop(&#34;macro avg&#34;)
@@ -182,11 +176,8 @@ Initializes internal Module state, shared by both nn.Module and ScriptModule.</p
         report[&#34;overall_precision&#34;] = overall_score[&#34;precision&#34;]
         report[&#34;overall_recall&#34;] = overall_score[&#34;recall&#34;]
         report[&#34;overall_f1&#34;] = overall_score[&#34;f1-score&#34;]
-        report[&#34;overall_accuracy&#34;] = accuracy_score(
-            y_true=target_bioul, y_pred=pred_bioul
-        )
 
-        return pd.json_normalize(report, sep=&#34;_&#34;).to_dict(orient=&#34;records&#34;)[0]</code></pre>
+        return pd.json_normalize(report, sep=&#34;_&#34;).to_dict(orient=&#34;records&#34;)[0]  # type: ignore</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
@@ -196,19 +187,19 @@ Initializes internal Module state, shared by both nn.Module and ScriptModule.</p
 </ul>
 <h3>Class variables</h3>
 <dl>
-<dt id="pl_metric.metric.Seqeval.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
+<dt id="src.pl_metric.seqeval_f1.Seqeval.higher_is_better"><code class="name">var <span class="ident">higher_is_better</span> : Optional[bool]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="pl_metric.metric.Seqeval.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
+<dt id="src.pl_metric.seqeval_f1.Seqeval.is_differentiable"><code class="name">var <span class="ident">is_differentiable</span> : Optional[bool]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pl_metric.metric.Seqeval.compute"><code class="name flex">
-<span>def <span class="ident">compute</span></span>(<span>self)</span>
+<dt id="src.pl_metric.seqeval_f1.Seqeval.compute"><code class="name flex">
+<span>def <span class="ident">compute</span></span>(<span>self) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Override this method to compute the final metric value from state variables synchronized across the
@@ -217,7 +208,7 @@ distributed backend.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def compute(self):
+<pre><code class="python">def compute(self) -&gt; dict:
     pred_bioul = []
     target_bioul = []
     for pred_seq, target_seq in zip(self.preds, self.targets):
@@ -225,9 +216,7 @@ distributed backend.</p></div>
         target_seq = target_seq.squeeze().cpu().numpy()
 
         true_labels_idx: list = [
-            idx
-            for idx, lab in enumerate(target_seq)
-            if lab != -100  # ignore special tags
+            idx for idx, lab in enumerate(target_seq) if lab != -100
         ]
 
         pred_bioul.append(
@@ -240,10 +229,10 @@ distributed backend.</p></div>
     report: dict = classification_report(
         y_true=target_bioul,
         y_pred=pred_bioul,
-        # mode=&#34;strict&#34;,
-        scheme=IOB2,
+        mode=&#34;strict&#34;,
+        scheme=BILOU,
         output_dict=True,
-        zero_division=1,  # no positive labels gives f1 of 0
+        zero_division=1,
     )  # type: ignore
 
     report.pop(&#34;macro avg&#34;)
@@ -253,66 +242,12 @@ distributed backend.</p></div>
     report[&#34;overall_precision&#34;] = overall_score[&#34;precision&#34;]
     report[&#34;overall_recall&#34;] = overall_score[&#34;recall&#34;]
     report[&#34;overall_f1&#34;] = overall_score[&#34;f1-score&#34;]
-    report[&#34;overall_accuracy&#34;] = accuracy_score(
-        y_true=target_bioul, y_pred=pred_bioul
-    )
 
-    return pd.json_normalize(report, sep=&#34;_&#34;).to_dict(orient=&#34;records&#34;)[0]</code></pre>
+    return pd.json_normalize(report, sep=&#34;_&#34;).to_dict(orient=&#34;records&#34;)[0]  # type: ignore</code></pre>
 </details>
 </dd>
-<dt id="pl_metric.metric.Seqeval.forward"><code class="name flex">
-<span>def <span class="ident">forward</span></span>(<span>self, *args: Any, **kwargs: Any) ‑> Any</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Automatically calls <code>update()</code>.</p>
-<p>Returns the metric value over inputs if <code>compute_on_step</code> is True.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@torch.jit.unused
-def forward(self, *args: Any, **kwargs: Any) -&gt; Any:
-    &#34;&#34;&#34;Automatically calls ``update()``.
-
-    Returns the metric value over inputs if ``compute_on_step`` is True.
-    &#34;&#34;&#34;
-    # add current step
-    if self._is_synced:
-        raise TorchMetricsUserError(
-            &#34;The Metric shouldn&#39;t be synced when performing ``update``. &#34;
-            &#34;HINT: Did you forget to call ``unsync`` ?.&#34;
-        )
-
-    with torch.no_grad():
-        self.update(*args, **kwargs)
-
-    if self.compute_on_step:
-        self._to_sync = self.dist_sync_on_step
-        # skip restore cache operation from compute as cache is stored below.
-        self._should_unsync = False
-
-        # save context before switch
-        cache = {attr: getattr(self, attr) for attr in self._defaults}
-
-        # call reset, update, compute, on single batch
-        self.reset()
-        self.update(*args, **kwargs)
-        self._forward_cache = self.compute()
-
-        # restore context
-        for attr, val in cache.items():
-            setattr(self, attr, val)
-        self._is_synced = False
-
-        self._should_unsync = True
-        self._to_sync = True
-        self._computed = None
-
-        return self._forward_cache</code></pre>
-</details>
-</dd>
-<dt id="pl_metric.metric.Seqeval.update"><code class="name flex">
-<span>def <span class="ident">update</span></span>(<span>self, preds, targets)</span>
+<dt id="src.pl_metric.seqeval_f1.Seqeval.update"><code class="name flex">
+<span>def <span class="ident">update</span></span>(<span>self, preds: torch.Tensor, targets: torch.Tensor) ‑> None</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Override this method to update the state variables of your metric class.</p></div>
@@ -320,7 +255,7 @@ def forward(self, *args: Any, **kwargs: Any) -&gt; Any:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def update(self, preds, targets):
+<pre><code class="python">def update(self, preds: torch.Tensor, targets: torch.Tensor) -&gt; None:
     self.preds.append(preds.flatten())
     self.targets.append(targets.flatten())</code></pre>
 </details>
@@ -338,19 +273,18 @@ def forward(self, *args: Any, **kwargs: Any) -&gt; Any:
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pl_metric" href="index.html">pl_metric</a></code></li>
+<li><code><a title="src.pl_metric" href="index.html">src.pl_metric</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pl_metric.metric.Seqeval" href="#pl_metric.metric.Seqeval">Seqeval</a></code></h4>
+<h4><code><a title="src.pl_metric.seqeval_f1.Seqeval" href="#src.pl_metric.seqeval_f1.Seqeval">Seqeval</a></code></h4>
 <ul class="">
-<li><code><a title="pl_metric.metric.Seqeval.compute" href="#pl_metric.metric.Seqeval.compute">compute</a></code></li>
-<li><code><a title="pl_metric.metric.Seqeval.dump_patches" href="#pl_metric.metric.Seqeval.dump_patches">dump_patches</a></code></li>
-<li><code><a title="pl_metric.metric.Seqeval.forward" href="#pl_metric.metric.Seqeval.forward">forward</a></code></li>
-<li><code><a title="pl_metric.metric.Seqeval.training" href="#pl_metric.metric.Seqeval.training">training</a></code></li>
-<li><code><a title="pl_metric.metric.Seqeval.update" href="#pl_metric.metric.Seqeval.update">update</a></code></li>
+<li><code><a title="src.pl_metric.seqeval_f1.Seqeval.compute" href="#src.pl_metric.seqeval_f1.Seqeval.compute">compute</a></code></li>
+<li><code><a title="src.pl_metric.seqeval_f1.Seqeval.higher_is_better" href="#src.pl_metric.seqeval_f1.Seqeval.higher_is_better">higher_is_better</a></code></li>
+<li><code><a title="src.pl_metric.seqeval_f1.Seqeval.is_differentiable" href="#src.pl_metric.seqeval_f1.Seqeval.is_differentiable">is_differentiable</a></code></li>
+<li><code><a title="src.pl_metric.seqeval_f1.Seqeval.update" href="#src.pl_metric.seqeval_f1.Seqeval.update">update</a></code></li>
 </ul>
 </li>
 </ul>

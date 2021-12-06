@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>common.utils API documentation</title>
+<title>src.common.utils API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>common.utils</code></h1>
+<h1 class="title">Module <code>src.common.utils</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -27,16 +27,19 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import numpy as np
-import pandas as pd
-import string
 import torch
 from collections import Counter
+from ekphrasis.classes.tokenizer import SocialTokenizer
+from ekphrasis.dicts.emoticons import emoticons
+from torch import Tensor
 from typing import Union
+
+tdict = dict[str, Tensor]
 
 
 class Const:
-    MODEL_NAME = &#34;bert-base-uncased&#34;
-    MAX_TOKEN_LEN = 256
+    MODEL_NAME = &#34;roberta-base&#34;
+    MAX_TOKEN_LEN = 64
     SPECIAL_TOKENS = [
         &#34;&lt;head&gt;&#34;,
         &#34;&lt;/head&gt;&#34;,
@@ -53,17 +56,32 @@ class Const:
         &#34;&lt;time&gt;&#34;,
         &#34;&lt;hashtag&gt;&#34;,
         &#34;&lt;/hashtag&gt;&#34;,
-        # &#34;&lt;repeated&gt;&#34;,
-        # &#34;&lt;/repeated&gt;&#34;,
-        # &#34;&lt;allcaps&gt;&#34;,
-        # &#34;&lt;/allcaps&gt;&#34;,
-        # &#34;&lt;elongated&gt;&#34;,
-        # &#34;&lt;/elongated&gt;&#34;,
-        # &#34;&lt;emphasis&gt;&#34;,
-        # &#34;&lt;/emphasis&gt;&#34;,
-        # &#34;&lt;censored&gt;&#34;,
-        # &#34;&lt;/censored&gt;&#34;,
     ]
+    NORMALIZE = [
+        &#34;url&#34;,
+        &#34;email&#34;,
+        &#34;percent&#34;,
+        &#34;money&#34;,
+        &#34;phone&#34;,
+        &#34;user&#34;,
+        &#34;time&#34;,
+        &#34;url&#34;,
+        &#34;date&#34;,
+        &#34;number&#34;,
+    ]
+
+    TEXT_PROCESSOR_ARGS = dict(
+        normalize=NORMALIZE,
+        annotate={&#34;hashtag&#34;},
+        fix_html=True,
+        segmenter=&#34;twitter&#34;,
+        corrector=&#34;twitter&#34;,
+        unpack_hashtags=True,
+        unpack_contractions=True,
+        spell_correct_elong=False,
+        tokenizer=SocialTokenizer(lowercase=True).tokenize,
+        dicts=[emoticons],
+    )
 
 
 class Label:
@@ -84,6 +102,8 @@ class Label:
                 &#34;O&#34;: 0,
                 &#34;B-location&#34;: 1,
                 &#34;I-location&#34;: 2,
+                &#34;L-location&#34;: 3,
+                &#34;U-location&#34;: 4,
             }
         elif self.name == &#34;REL&#34;:
             self.labels: dict[str, int] = {
@@ -99,8 +119,8 @@ def encode_labels(
     tokens: list[str],
     labels: list[int],
     tokenizer,
-    max_token_len=128,
-) -&gt; tuple[dict, list]:
+    max_token_len: int,
+) -&gt; tuple[dict[str, Tensor], Tensor]:
     &#34;&#34;&#34;
     Encode list of tokens and labels into subwords.
 
@@ -133,12 +153,15 @@ def encode_labels(
     &gt;&gt;&gt; tokens = [&#39;Testing&#39;, &#39;this&#39;, &#39;for&#39;, &#39;doctest&#39;, &#39;.&#39;]
     &gt;&gt;&gt; labels = [1, 0, 0, 0, 0]
     &gt;&gt;&gt; tokenizer = AutoTokenizer.from_pretrained(
-    ...     &#39;distilbert-base-cased&#39;, add_prefix_space=True
+    ...     &#39;roberta-base&#39;, add_prefix_space=True
     ... )
-    &gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
+    &gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer, 32)
 
     &gt;&gt;&gt; len(encoding[&#39;input_ids&#39;].flatten()) == len(labels_encoded)
     True
+
+    &gt;&gt;&gt; labels_encoded.tolist()[:6]
+    [-100, 1, 0, 0, 0, -100]
     &#34;&#34;&#34;
     encoding = tokenizer(
         tokens,
@@ -150,23 +173,21 @@ def encode_labels(
         truncation=True,
         return_tensors=&#34;pt&#34;,
     )
-
-    offset = encoding.offset_mapping[0]
-    doc_enc_labels = np.ones(len(offset), dtype=int) * -100
-    arr_offset = np.array(offset)
-    offsets_array = (arr_offset[:, 0] == 0) &amp; (arr_offset[:, 1] != 0)
+    offset = np.array(encoding.offset_mapping[0])
+    doc_enc_labels = np.ones(max_token_len, dtype=int) * -100  # type: ignore
+    offsets_array = (offset[:, 0] == 1) &amp; (offset[:, 1] != 1)
     if sum(offsets_array) &lt; len(labels):
         doc_enc_labels[offsets_array] = labels[: sum(offsets_array)]
     else:
         doc_enc_labels[offsets_array] = labels
-    return encoding, doc_enc_labels
+
+    encoded_labels = torch.LongTensor(doc_enc_labels)
+    return encoding, encoded_labels
 
 
 def combine_subwords(tokens: list[str], tags: list[int]) -&gt; tuple[list[str], list[str]]:
     &#34;&#34;&#34;
     Combines subwords and their tags into normal words with special chars removed.
-
-    WARNING: This removed all punctuation!
 
     Parameters
     ----------
@@ -184,7 +205,7 @@ def combine_subwords(tokens: list[str], tags: list[int]) -&gt; tuple[list[str], 
     -------
 
     &gt;&gt;&gt; tokens = [&#39;ĠVery&#39;, &#39;long&#39;, &#39;word&#39;, &#39;Ġfor&#39;, &#39;Ġdoct&#39;, &#39;est&#39;, &#39;Ġ.&#39;]
-    &gt;&gt;&gt; tags = [1, -100, -100, 0, 1, -100, 0]
+    &gt;&gt;&gt; tags = [4, -100, -100, 0, 4, -100, 0]
     &gt;&gt;&gt; tokens, tags = combine_subwords(tokens, tags)
 
     &gt;&gt;&gt; tokens
@@ -192,10 +213,9 @@ def combine_subwords(tokens: list[str], tags: list[int]) -&gt; tuple[list[str], 
     &gt;&gt;&gt; len(tags) == len(tokens)
     True
     &#34;&#34;&#34;
+
     idx = [
-        idx
-        for idx, token in enumerate(tokens)
-        if token not in [&#34;[CLS]&#34;, &#34;[PAD]&#34;, &#34;[SEP]&#34;]
+        idx for idx, token in enumerate(tokens) if token not in [&#34;&lt;s&gt;&#34;, &#34;&lt;pad&gt;&#34;, &#34;&lt;/s&gt;&#34;]
     ]
 
     tokens = [tokens[i] for i in idx]
@@ -203,13 +223,12 @@ def combine_subwords(tokens: list[str], tags: list[int]) -&gt; tuple[list[str], 
 
     for idx, _ in enumerate(tokens):
         idx += 1
-        if tokens[-idx + 1].startswith(&#34;##&#34;):
-            tokens[-idx] = tokens[-idx] + tokens[-idx + 1][2:]
-
-    subwords = [i for i, _ in enumerate(tokens) if not tokens[i].startswith(&#34;##&#34;)]
+        if not tokens[-idx + 1].startswith(&#34;Ġ&#34;):
+            tokens[-idx] = tokens[-idx] + tokens[-idx + 1]
+    subwords = [i for i, _ in enumerate(tokens) if tokens[i].startswith(&#34;Ġ&#34;)]
 
     tags = [tags[i] for i in subwords]
-    tokens = [tokens[i] for i in subwords]
+    tokens = [tokens[i][1:] for i in subwords]
     tags_str: list[str] = [Label(&#34;GER&#34;).idx[i] for i in tags]
     return tokens, tags_str
 
@@ -232,12 +251,12 @@ def combine_biluo(tokens: list[str], tags: list[str]) -&gt; tuple[list[str], lis
 
     Example:
 
-    &gt;&gt;&gt; tokens = [&#39;New&#39;, &#39;York&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
-    &gt;&gt;&gt; tags = [&#39;B-PLACE&#39;, &#39;L-PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
+    &gt;&gt;&gt; tokens = [&#39;New&#39;, &#39;York&#39;, &#39;City&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
+    &gt;&gt;&gt; tags = [&#39;B-PLACE&#39;, &#39;I-PLACE&#39;, &#39;L-City&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
     &gt;&gt;&gt; tokens, tags = combine_biluo(tokens, tags)
 
     &gt;&gt;&gt; tokens
-    [&#39;New York&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
+    [&#39;New York City&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
     &gt;&gt;&gt; tags
     [&#39;PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
     &#34;&#34;&#34;
@@ -252,23 +271,36 @@ def combine_biluo(tokens: list[str], tags: list[str]) -&gt; tuple[list[str], lis
                 i += 1
                 if idx + i == len(tokens_biluo):
                     break
-    # zipped = [
-    #     (token, tag)
-    #     for (token, tag) in zip(tokens_biluo, tags_biluo)
-    #     if tag[0] not in [&#34;I&#34;, &#34;L&#34;]
-    # ]
-    # tokens_biluo, tags_biluo = zip(*zipped)
-    tags_biluo = [tag[2:] if tag != &#34;O&#34; else tag for tag in tags_biluo]
-    return list(tokens_biluo), tags_biluo
+
+    zipped = [
+        (token, tag)
+        for (token, tag) in zip(tokens_biluo, tags_biluo)
+        if tag[0] not in [&#34;I&#34;, &#34;L&#34;]
+    ]
+    if list(zipped):
+        tokens_biluo, tags_biluo = zip(*zipped)
+        tags_biluo = [tag[2:] if tag != &#34;O&#34; else tag for tag in tags_biluo]
+        return list(tokens_biluo), tags_biluo
+    else:
+        return [], []
 
 
 def ents_to_relations(tokens: list[str], tags: list[str]) -&gt; Union[list[str], None]:
     &#34;&#34;&#34;
-    Convert list of combined entities and other tokens with tags into semeval format.
+    Convert a list of tokens and tags into relations using the head and tail format
+    used by the NYT corpus.
 
-    :param tokens list[str]: [TODO:description]
-    :param tags list[str]: [TODO:description]
-    :rtype Union[list[str], None]: [TODO:description]
+    Parameters
+    ----------
+    tokens : list[str]
+        List of tokens.
+    tags : list[str]
+        List of tags.
+
+    Returns
+    -------
+    Union[list[str], None]
+        List of strings with head and tail annotations.
 
     Example:
 
@@ -276,7 +308,9 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -&gt; Union[list[str],
     &gt;&gt;&gt; tags = [&#39;PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;PLACE&#39;, &#39;O&#39;, &#39;PLACE&#39;]
 
     &gt;&gt;&gt; ents_to_relations(tokens, tags)[0]
-    &#39;&lt;e1&gt; New York &lt;/e1&gt; is in &lt;e2&gt; New York &lt;/e2&gt; , America&#39;
+    &#39;&lt;head&gt; New York &lt;/head&gt; is in &lt;tail&gt; New York &lt;/tail&gt; , America&#39;
+    &gt;&gt;&gt; ents_to_relations(tokens, tags)[1]
+    &#39;&lt;head&gt; New York &lt;/head&gt; is in New York , &lt;tail&gt; America &lt;/tail&gt;&#39;
     &#34;&#34;&#34;
 
     # check if at least two entities
@@ -289,104 +323,78 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -&gt; Union[list[str],
         for j in loc_idxs:
             if i != j:
                 tokens_copy = tokens.copy()
-                tokens_copy[i] = &#34;&lt;head&gt;&#34; + tokens_copy[i] + &#34;&lt;/head&gt;&#34;
-                tokens_copy[j] = &#34;&lt;tail&gt;&#34; + tokens_copy[j] + &#34;&lt;/tail&gt;&#34;
+                tokens_copy[i] = &#34;&lt;head&gt; &#34; + tokens_copy[i] + &#34; &lt;/head&gt;&#34;
+                tokens_copy[j] = &#34;&lt;tail&gt; &#34; + tokens_copy[j] + &#34; &lt;/tail&gt;&#34;
                 sequence_list.append(&#34; &#34;.join(tokens_copy))
     return sequence_list
 
 
-def convert_examples_to_features(
-    item: pd.Series,
-    max_seq_len: int,
-    tokenizer,
-    labels: bool = True,
-    cls_token: str = &#34;[CLS]&#34;,
-    sep_token: str = &#34;[SEP]&#34;,
-    pad_token: int = 0,
-    add_sep_token: bool = False,
-    mask_padding_with_zero: bool = True,
-):
-    label_id = None
-    if labels:
+def convert_input(item: dict, max_seq_len: int, tokenizer) -&gt; Union[dict, None]:
+    if &#34;relation&#34; in item:
         tokens_a = tokenizer.tokenize(
             item[&#34;sentence&#34;],
-            max_length=max_seq_len,
-            padding=&#34;max_length&#34;,
+            # max_length=max_seq_len,
             truncation=True,
             return_tensors=&#34;pt&#34;,
         )
         label_id = int(item[&#34;relation&#34;])
     else:
         tokens_a = tokenizer.tokenize(
-            item,
-            max_length=max_seq_len,
-            padding=&#34;max_length&#34;,
+            item[&#34;sentence&#34;],
+            # max_length=max_seq_len,
             truncation=True,
             return_tensors=&#34;pt&#34;,
         )
+        label_id = None
 
     e11_p = tokens_a.index(&#34;&lt;head&gt;&#34;)  # the start position of entity1
     e12_p = tokens_a.index(&#34;&lt;/head&gt;&#34;)  # the end position of entity1
     e21_p = tokens_a.index(&#34;&lt;tail&gt;&#34;)  # the start position of entity2
     e22_p = tokens_a.index(&#34;&lt;/tail&gt;&#34;)  # the end position of entity2
 
-    # Replace the token
-    tokens_a[e11_p] = &#34;$&#34;
-    tokens_a[e12_p] = &#34;$&#34;
-    tokens_a[e21_p] = &#34;#&#34;
-    tokens_a[e22_p] = &#34;#&#34;
-
-    # Add 1 because of the [CLS] token
-    e11_p += 1
-    e12_p += 1
-    e21_p += 1
-    e22_p += 1
+    tokens_a = [&#34;&lt;s&gt;&#34;] + tokens_a
 
     # Account for [CLS] and [SEP] with &#34;- 2&#34; and with &#34;- 3&#34; for RoBERTa.
-    special_tokens_count = 2 if add_sep_token else 1
-    if len(tokens_a) &gt; max_seq_len - special_tokens_count:
-        tokens_a = tokens_a[: (max_seq_len - special_tokens_count)]
+    if len(tokens_a) &gt; max_seq_len - 1:
+        tokens_a = tokens_a[: (max_seq_len - 1)]
 
-    tokens = tokens_a
-    if add_sep_token:
-        tokens += [sep_token]
+    if all(x in tokens_a for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]):
+        input_ids = tokenizer.convert_tokens_to_ids(tokens_a)
 
-    tokens = [cls_token] + tokens
-    input_ids = tokenizer.convert_tokens_to_ids(tokens)
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
+        attention_mask = [1] * len(input_ids)
 
-    # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-    attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
+        # Zero-pad up to the sequence length.
+        padding_length = max_seq_len - len(input_ids)
+        input_ids = input_ids + ([1] * padding_length)
+        attention_mask = attention_mask + ([0] * padding_length)
 
-    # Zero-pad up to the sequence length.
-    padding_length = max_seq_len - len(input_ids)
-    input_ids = input_ids + ([pad_token] * padding_length)
-    attention_mask = attention_mask + (
-        [0 if mask_padding_with_zero else 1] * padding_length
-    )
+        # e1 mask, e2 mask
+        e1_mask = [0] * len(attention_mask)
+        e2_mask = [0] * len(attention_mask)
 
-    # e1 mask, e2 mask
-    e1_mask = [0] * len(attention_mask)
-    e2_mask = [0] * len(attention_mask)
+        if len(input_ids):
+            for i in range(e11_p, e12_p + 1):
+                e1_mask[i] = 1
+            for i in range(e21_p, e22_p + 1):
+                e2_mask[i] = 1
 
-    for i in range(e11_p, e12_p + 1):
-        e1_mask[i] = 1
-    for i in range(e21_p, e22_p + 1):
-        e2_mask[i] = 1
+            assert (
+                len(input_ids) == max_seq_len
+            ), f&#34;Error with input length {len(input_ids)} vs {max_seq_len}&#34;
+            assert (
+                len(attention_mask) == max_seq_len
+            ), f&#34;Error with attention mask length {len(attention_mask)} vs {max_seq_len}&#34;
 
-    assert (
-        len(input_ids) == max_seq_len
-    ), f&#34;Error with input length {len(input_ids)} vs {max_seq_len}&#34;
-    assert (
-        len(attention_mask) == max_seq_len
-    ), f&#34;Error with attention mask length {len(attention_mask)} vs {max_seq_len}&#34;
-
-    return {
-        &#34;input_ids&#34;: torch.tensor(input_ids, dtype=torch.long),
-        &#34;attention_mask&#34;: torch.tensor(attention_mask, dtype=torch.long),
-        &#34;labels&#34;: torch.tensor(label_id, dtype=torch.long) if labels else None,
-        &#34;e1_mask&#34;: torch.tensor(e1_mask, dtype=torch.long),
-        &#34;e2_mask&#34;: torch.tensor(e2_mask, dtype=torch.long),
-    }
+            return {
+                &#34;input_ids&#34;: torch.tensor(input_ids, dtype=torch.long),
+                &#34;attention_mask&#34;: torch.tensor(attention_mask, dtype=torch.long),
+                &#34;labels&#34;: torch.tensor(label_id, dtype=torch.long)
+                if label_id is not None
+                else None,
+                &#34;e1_mask&#34;: torch.tensor(e1_mask, dtype=torch.long),
+                &#34;e2_mask&#34;: torch.tensor(e2_mask, dtype=torch.long),
+            }
 
 
 if __name__ == &#34;__main__&#34;:
@@ -402,7 +410,7 @@ if __name__ == &#34;__main__&#34;:
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="common.utils.combine_biluo"><code class="name flex">
+<dt id="src.common.utils.combine_biluo"><code class="name flex">
 <span>def <span class="ident">combine_biluo</span></span>(<span>tokens: list, tags: list) ‑> tuple</span>
 </code></dt>
 <dd>
@@ -421,12 +429,12 @@ if __name__ == &#34;__main__&#34;:
 <dt><code>Example:</code></dt>
 <dd>&nbsp;</dd>
 </dl>
-<pre><code class="language-python-repl">&gt;&gt;&gt; tokens = ['New', 'York', 'is', 'big', '.']
-&gt;&gt;&gt; tags = ['B-PLACE', 'L-PLACE', 'O', 'O', 'O']
+<pre><code class="language-python-repl">&gt;&gt;&gt; tokens = ['New', 'York', 'City', 'is', 'big', '.']
+&gt;&gt;&gt; tags = ['B-PLACE', 'I-PLACE', 'L-City', 'O', 'O', 'O']
 &gt;&gt;&gt; tokens, tags = combine_biluo(tokens, tags)
 </code></pre>
 <pre><code class="language-python-repl">&gt;&gt;&gt; tokens
-['New York', 'is', 'big', '.']
+['New York City', 'is', 'big', '.']
 &gt;&gt;&gt; tags
 ['PLACE', 'O', 'O', 'O']
 </code></pre></div>
@@ -452,12 +460,12 @@ if __name__ == &#34;__main__&#34;:
 
     Example:
 
-    &gt;&gt;&gt; tokens = [&#39;New&#39;, &#39;York&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
-    &gt;&gt;&gt; tags = [&#39;B-PLACE&#39;, &#39;L-PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
+    &gt;&gt;&gt; tokens = [&#39;New&#39;, &#39;York&#39;, &#39;City&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
+    &gt;&gt;&gt; tags = [&#39;B-PLACE&#39;, &#39;I-PLACE&#39;, &#39;L-City&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
     &gt;&gt;&gt; tokens, tags = combine_biluo(tokens, tags)
 
     &gt;&gt;&gt; tokens
-    [&#39;New York&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
+    [&#39;New York City&#39;, &#39;is&#39;, &#39;big&#39;, &#39;.&#39;]
     &gt;&gt;&gt; tags
     [&#39;PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;O&#39;]
     &#34;&#34;&#34;
@@ -472,22 +480,25 @@ if __name__ == &#34;__main__&#34;:
                 i += 1
                 if idx + i == len(tokens_biluo):
                     break
-    # zipped = [
-    #     (token, tag)
-    #     for (token, tag) in zip(tokens_biluo, tags_biluo)
-    #     if tag[0] not in [&#34;I&#34;, &#34;L&#34;]
-    # ]
-    # tokens_biluo, tags_biluo = zip(*zipped)
-    tags_biluo = [tag[2:] if tag != &#34;O&#34; else tag for tag in tags_biluo]
-    return list(tokens_biluo), tags_biluo</code></pre>
+
+    zipped = [
+        (token, tag)
+        for (token, tag) in zip(tokens_biluo, tags_biluo)
+        if tag[0] not in [&#34;I&#34;, &#34;L&#34;]
+    ]
+    if list(zipped):
+        tokens_biluo, tags_biluo = zip(*zipped)
+        tags_biluo = [tag[2:] if tag != &#34;O&#34; else tag for tag in tags_biluo]
+        return list(tokens_biluo), tags_biluo
+    else:
+        return [], []</code></pre>
 </details>
 </dd>
-<dt id="common.utils.combine_subwords"><code class="name flex">
+<dt id="src.common.utils.combine_subwords"><code class="name flex">
 <span>def <span class="ident">combine_subwords</span></span>(<span>tokens: list, tags: list) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Combines subwords and their tags into normal words with special chars removed.</p>
-<p>WARNING: This removed all punctuation!</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>tokens</code></strong> :&ensp;<code>list[str]</code></dt>
@@ -502,7 +513,7 @@ if __name__ == &#34;__main__&#34;:
 </dl>
 <h2 id="example">Example</h2>
 <pre><code class="language-python-repl">&gt;&gt;&gt; tokens = ['ĠVery', 'long', 'word', 'Ġfor', 'Ġdoct', 'est', 'Ġ.']
-&gt;&gt;&gt; tags = [1, -100, -100, 0, 1, -100, 0]
+&gt;&gt;&gt; tags = [4, -100, -100, 0, 4, -100, 0]
 &gt;&gt;&gt; tokens, tags = combine_subwords(tokens, tags)
 </code></pre>
 <pre><code class="language-python-repl">&gt;&gt;&gt; tokens
@@ -517,8 +528,6 @@ True
 <pre><code class="python">def combine_subwords(tokens: list[str], tags: list[int]) -&gt; tuple[list[str], list[str]]:
     &#34;&#34;&#34;
     Combines subwords and their tags into normal words with special chars removed.
-
-    WARNING: This removed all punctuation!
 
     Parameters
     ----------
@@ -536,7 +545,7 @@ True
     -------
 
     &gt;&gt;&gt; tokens = [&#39;ĠVery&#39;, &#39;long&#39;, &#39;word&#39;, &#39;Ġfor&#39;, &#39;Ġdoct&#39;, &#39;est&#39;, &#39;Ġ.&#39;]
-    &gt;&gt;&gt; tags = [1, -100, -100, 0, 1, -100, 0]
+    &gt;&gt;&gt; tags = [4, -100, -100, 0, 4, -100, 0]
     &gt;&gt;&gt; tokens, tags = combine_subwords(tokens, tags)
 
     &gt;&gt;&gt; tokens
@@ -544,10 +553,9 @@ True
     &gt;&gt;&gt; len(tags) == len(tokens)
     True
     &#34;&#34;&#34;
+
     idx = [
-        idx
-        for idx, token in enumerate(tokens)
-        if token not in [&#34;[CLS]&#34;, &#34;[PAD]&#34;, &#34;[SEP]&#34;]
+        idx for idx, token in enumerate(tokens) if token not in [&#34;&lt;s&gt;&#34;, &#34;&lt;pad&gt;&#34;, &#34;&lt;/s&gt;&#34;]
     ]
 
     tokens = [tokens[i] for i in idx]
@@ -555,19 +563,18 @@ True
 
     for idx, _ in enumerate(tokens):
         idx += 1
-        if tokens[-idx + 1].startswith(&#34;##&#34;):
-            tokens[-idx] = tokens[-idx] + tokens[-idx + 1][2:]
-
-    subwords = [i for i, _ in enumerate(tokens) if not tokens[i].startswith(&#34;##&#34;)]
+        if not tokens[-idx + 1].startswith(&#34;Ġ&#34;):
+            tokens[-idx] = tokens[-idx] + tokens[-idx + 1]
+    subwords = [i for i, _ in enumerate(tokens) if tokens[i].startswith(&#34;Ġ&#34;)]
 
     tags = [tags[i] for i in subwords]
-    tokens = [tokens[i] for i in subwords]
+    tokens = [tokens[i][1:] for i in subwords]
     tags_str: list[str] = [Label(&#34;GER&#34;).idx[i] for i in tags]
     return tokens, tags_str</code></pre>
 </details>
 </dd>
-<dt id="common.utils.convert_examples_to_features"><code class="name flex">
-<span>def <span class="ident">convert_examples_to_features</span></span>(<span>item: pandas.core.series.Series, max_seq_len: int, tokenizer, labels: bool = True, cls_token: str = '[CLS]', sep_token: str = '[SEP]', pad_token: int = 0, add_sep_token: bool = False, mask_padding_with_zero: bool = True)</span>
+<dt id="src.common.utils.convert_input"><code class="name flex">
+<span>def <span class="ident">convert_input</span></span>(<span>item: dict, max_seq_len: int, tokenizer) ‑> Optional[dict]</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -575,102 +582,76 @@ True
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def convert_examples_to_features(
-    item: pd.Series,
-    max_seq_len: int,
-    tokenizer,
-    labels: bool = True,
-    cls_token: str = &#34;[CLS]&#34;,
-    sep_token: str = &#34;[SEP]&#34;,
-    pad_token: int = 0,
-    add_sep_token: bool = False,
-    mask_padding_with_zero: bool = True,
-):
-    label_id = None
-    if labels:
+<pre><code class="python">def convert_input(item: dict, max_seq_len: int, tokenizer) -&gt; Union[dict, None]:
+    if &#34;relation&#34; in item:
         tokens_a = tokenizer.tokenize(
             item[&#34;sentence&#34;],
-            max_length=max_seq_len,
-            padding=&#34;max_length&#34;,
+            # max_length=max_seq_len,
             truncation=True,
             return_tensors=&#34;pt&#34;,
         )
         label_id = int(item[&#34;relation&#34;])
     else:
         tokens_a = tokenizer.tokenize(
-            item,
-            max_length=max_seq_len,
-            padding=&#34;max_length&#34;,
+            item[&#34;sentence&#34;],
+            # max_length=max_seq_len,
             truncation=True,
             return_tensors=&#34;pt&#34;,
         )
+        label_id = None
 
     e11_p = tokens_a.index(&#34;&lt;head&gt;&#34;)  # the start position of entity1
     e12_p = tokens_a.index(&#34;&lt;/head&gt;&#34;)  # the end position of entity1
     e21_p = tokens_a.index(&#34;&lt;tail&gt;&#34;)  # the start position of entity2
     e22_p = tokens_a.index(&#34;&lt;/tail&gt;&#34;)  # the end position of entity2
 
-    # Replace the token
-    tokens_a[e11_p] = &#34;$&#34;
-    tokens_a[e12_p] = &#34;$&#34;
-    tokens_a[e21_p] = &#34;#&#34;
-    tokens_a[e22_p] = &#34;#&#34;
-
-    # Add 1 because of the [CLS] token
-    e11_p += 1
-    e12_p += 1
-    e21_p += 1
-    e22_p += 1
+    tokens_a = [&#34;&lt;s&gt;&#34;] + tokens_a
 
     # Account for [CLS] and [SEP] with &#34;- 2&#34; and with &#34;- 3&#34; for RoBERTa.
-    special_tokens_count = 2 if add_sep_token else 1
-    if len(tokens_a) &gt; max_seq_len - special_tokens_count:
-        tokens_a = tokens_a[: (max_seq_len - special_tokens_count)]
+    if len(tokens_a) &gt; max_seq_len - 1:
+        tokens_a = tokens_a[: (max_seq_len - 1)]
 
-    tokens = tokens_a
-    if add_sep_token:
-        tokens += [sep_token]
+    if all(x in tokens_a for x in [&#34;&lt;head&gt;&#34;, &#34;&lt;/head&gt;&#34;, &#34;&lt;tail&gt;&#34;, &#34;&lt;/tail&gt;&#34;]):
+        input_ids = tokenizer.convert_tokens_to_ids(tokens_a)
 
-    tokens = [cls_token] + tokens
-    input_ids = tokenizer.convert_tokens_to_ids(tokens)
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
+        attention_mask = [1] * len(input_ids)
 
-    # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-    attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
+        # Zero-pad up to the sequence length.
+        padding_length = max_seq_len - len(input_ids)
+        input_ids = input_ids + ([1] * padding_length)
+        attention_mask = attention_mask + ([0] * padding_length)
 
-    # Zero-pad up to the sequence length.
-    padding_length = max_seq_len - len(input_ids)
-    input_ids = input_ids + ([pad_token] * padding_length)
-    attention_mask = attention_mask + (
-        [0 if mask_padding_with_zero else 1] * padding_length
-    )
+        # e1 mask, e2 mask
+        e1_mask = [0] * len(attention_mask)
+        e2_mask = [0] * len(attention_mask)
 
-    # e1 mask, e2 mask
-    e1_mask = [0] * len(attention_mask)
-    e2_mask = [0] * len(attention_mask)
+        if len(input_ids):
+            for i in range(e11_p, e12_p + 1):
+                e1_mask[i] = 1
+            for i in range(e21_p, e22_p + 1):
+                e2_mask[i] = 1
 
-    for i in range(e11_p, e12_p + 1):
-        e1_mask[i] = 1
-    for i in range(e21_p, e22_p + 1):
-        e2_mask[i] = 1
+            assert (
+                len(input_ids) == max_seq_len
+            ), f&#34;Error with input length {len(input_ids)} vs {max_seq_len}&#34;
+            assert (
+                len(attention_mask) == max_seq_len
+            ), f&#34;Error with attention mask length {len(attention_mask)} vs {max_seq_len}&#34;
 
-    assert (
-        len(input_ids) == max_seq_len
-    ), f&#34;Error with input length {len(input_ids)} vs {max_seq_len}&#34;
-    assert (
-        len(attention_mask) == max_seq_len
-    ), f&#34;Error with attention mask length {len(attention_mask)} vs {max_seq_len}&#34;
-
-    return {
-        &#34;input_ids&#34;: torch.tensor(input_ids, dtype=torch.long),
-        &#34;attention_mask&#34;: torch.tensor(attention_mask, dtype=torch.long),
-        &#34;labels&#34;: torch.tensor(label_id, dtype=torch.long) if labels else None,
-        &#34;e1_mask&#34;: torch.tensor(e1_mask, dtype=torch.long),
-        &#34;e2_mask&#34;: torch.tensor(e2_mask, dtype=torch.long),
-    }</code></pre>
+            return {
+                &#34;input_ids&#34;: torch.tensor(input_ids, dtype=torch.long),
+                &#34;attention_mask&#34;: torch.tensor(attention_mask, dtype=torch.long),
+                &#34;labels&#34;: torch.tensor(label_id, dtype=torch.long)
+                if label_id is not None
+                else None,
+                &#34;e1_mask&#34;: torch.tensor(e1_mask, dtype=torch.long),
+                &#34;e2_mask&#34;: torch.tensor(e2_mask, dtype=torch.long),
+            }</code></pre>
 </details>
 </dd>
-<dt id="common.utils.encode_labels"><code class="name flex">
-<span>def <span class="ident">encode_labels</span></span>(<span>tokens: list, labels: list, tokenizer, max_token_len=128) ‑> tuple</span>
+<dt id="src.common.utils.encode_labels"><code class="name flex">
+<span>def <span class="ident">encode_labels</span></span>(<span>tokens: list, labels: list, tokenizer, max_token_len: int) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Encode list of tokens and labels into subwords.</p>
@@ -700,12 +681,15 @@ words have been split into sub words, or there is padding.</p>
 &gt;&gt;&gt; tokens = ['Testing', 'this', 'for', 'doctest', '.']
 &gt;&gt;&gt; labels = [1, 0, 0, 0, 0]
 &gt;&gt;&gt; tokenizer = AutoTokenizer.from_pretrained(
-...     'distilbert-base-cased', add_prefix_space=True
+...     'roberta-base', add_prefix_space=True
 ... )
-&gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
+&gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer, 32)
 </code></pre>
 <pre><code class="language-python-repl">&gt;&gt;&gt; len(encoding['input_ids'].flatten()) == len(labels_encoded)
 True
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; labels_encoded.tolist()[:6]
+[-100, 1, 0, 0, 0, -100]
 </code></pre></div>
 <details class="source">
 <summary>
@@ -715,8 +699,8 @@ True
     tokens: list[str],
     labels: list[int],
     tokenizer,
-    max_token_len=128,
-) -&gt; tuple[dict, list]:
+    max_token_len: int,
+) -&gt; tuple[dict[str, Tensor], Tensor]:
     &#34;&#34;&#34;
     Encode list of tokens and labels into subwords.
 
@@ -749,12 +733,15 @@ True
     &gt;&gt;&gt; tokens = [&#39;Testing&#39;, &#39;this&#39;, &#39;for&#39;, &#39;doctest&#39;, &#39;.&#39;]
     &gt;&gt;&gt; labels = [1, 0, 0, 0, 0]
     &gt;&gt;&gt; tokenizer = AutoTokenizer.from_pretrained(
-    ...     &#39;distilbert-base-cased&#39;, add_prefix_space=True
+    ...     &#39;roberta-base&#39;, add_prefix_space=True
     ... )
-    &gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer)
+    &gt;&gt;&gt; encoding, labels_encoded = encode_labels(tokens, labels, tokenizer, 32)
 
     &gt;&gt;&gt; len(encoding[&#39;input_ids&#39;].flatten()) == len(labels_encoded)
     True
+
+    &gt;&gt;&gt; labels_encoded.tolist()[:6]
+    [-100, 1, 0, 0, 0, -100]
     &#34;&#34;&#34;
     encoding = tokenizer(
         tokens,
@@ -766,32 +753,45 @@ True
         truncation=True,
         return_tensors=&#34;pt&#34;,
     )
-
-    offset = encoding.offset_mapping[0]
-    doc_enc_labels = np.ones(len(offset), dtype=int) * -100
-    arr_offset = np.array(offset)
-    offsets_array = (arr_offset[:, 0] == 0) &amp; (arr_offset[:, 1] != 0)
+    offset = np.array(encoding.offset_mapping[0])
+    doc_enc_labels = np.ones(max_token_len, dtype=int) * -100  # type: ignore
+    offsets_array = (offset[:, 0] == 1) &amp; (offset[:, 1] != 1)
     if sum(offsets_array) &lt; len(labels):
         doc_enc_labels[offsets_array] = labels[: sum(offsets_array)]
     else:
         doc_enc_labels[offsets_array] = labels
-    return encoding, doc_enc_labels</code></pre>
+
+    encoded_labels = torch.LongTensor(doc_enc_labels)
+    return encoding, encoded_labels</code></pre>
 </details>
 </dd>
-<dt id="common.utils.ents_to_relations"><code class="name flex">
+<dt id="src.common.utils.ents_to_relations"><code class="name flex">
 <span>def <span class="ident">ents_to_relations</span></span>(<span>tokens: list, tags: list) ‑> Optional[list]</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Convert list of combined entities and other tokens with tags into semeval format.</p>
-<p>:param tokens list[str]: [TODO:description]
-:param tags list[str]: [TODO:description]
-:rtype Union[list[str], None]: [TODO:description]</p>
-<p>Example:</p>
+<div class="desc"><p>Convert a list of tokens and tags into relations using the head and tail format
+used by the NYT corpus.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>tokens</code></strong> :&ensp;<code>list[str]</code></dt>
+<dd>List of tokens.</dd>
+<dt><strong><code>tags</code></strong> :&ensp;<code>list[str]</code></dt>
+<dd>List of tags.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Union[list[str], None]</code></dt>
+<dd>List of strings with head and tail annotations.</dd>
+<dt><code>Example:</code></dt>
+<dd>&nbsp;</dd>
+</dl>
 <pre><code class="language-python-repl">&gt;&gt;&gt; tokens = ['New York', 'is', 'in', 'New York', ',', 'America']
 &gt;&gt;&gt; tags = ['PLACE', 'O', 'O', 'PLACE', 'O', 'PLACE']
 </code></pre>
 <pre><code class="language-python-repl">&gt;&gt;&gt; ents_to_relations(tokens, tags)[0]
-'&lt;e1&gt; New York &lt;/e1&gt; is in &lt;e2&gt; New York &lt;/e2&gt; , America'
+'&lt;head&gt; New York &lt;/head&gt; is in &lt;tail&gt; New York &lt;/tail&gt; , America'
+&gt;&gt;&gt; ents_to_relations(tokens, tags)[1]
+'&lt;head&gt; New York &lt;/head&gt; is in New York , &lt;tail&gt; America &lt;/tail&gt;'
 </code></pre></div>
 <details class="source">
 <summary>
@@ -799,11 +799,20 @@ True
 </summary>
 <pre><code class="python">def ents_to_relations(tokens: list[str], tags: list[str]) -&gt; Union[list[str], None]:
     &#34;&#34;&#34;
-    Convert list of combined entities and other tokens with tags into semeval format.
+    Convert a list of tokens and tags into relations using the head and tail format
+    used by the NYT corpus.
 
-    :param tokens list[str]: [TODO:description]
-    :param tags list[str]: [TODO:description]
-    :rtype Union[list[str], None]: [TODO:description]
+    Parameters
+    ----------
+    tokens : list[str]
+        List of tokens.
+    tags : list[str]
+        List of tags.
+
+    Returns
+    -------
+    Union[list[str], None]
+        List of strings with head and tail annotations.
 
     Example:
 
@@ -811,7 +820,9 @@ True
     &gt;&gt;&gt; tags = [&#39;PLACE&#39;, &#39;O&#39;, &#39;O&#39;, &#39;PLACE&#39;, &#39;O&#39;, &#39;PLACE&#39;]
 
     &gt;&gt;&gt; ents_to_relations(tokens, tags)[0]
-    &#39;&lt;e1&gt; New York &lt;/e1&gt; is in &lt;e2&gt; New York &lt;/e2&gt; , America&#39;
+    &#39;&lt;head&gt; New York &lt;/head&gt; is in &lt;tail&gt; New York &lt;/tail&gt; , America&#39;
+    &gt;&gt;&gt; ents_to_relations(tokens, tags)[1]
+    &#39;&lt;head&gt; New York &lt;/head&gt; is in New York , &lt;tail&gt; America &lt;/tail&gt;&#39;
     &#34;&#34;&#34;
 
     # check if at least two entities
@@ -824,8 +835,8 @@ True
         for j in loc_idxs:
             if i != j:
                 tokens_copy = tokens.copy()
-                tokens_copy[i] = &#34;&lt;head&gt;&#34; + tokens_copy[i] + &#34;&lt;/head&gt;&#34;
-                tokens_copy[j] = &#34;&lt;tail&gt;&#34; + tokens_copy[j] + &#34;&lt;/tail&gt;&#34;
+                tokens_copy[i] = &#34;&lt;head&gt; &#34; + tokens_copy[i] + &#34; &lt;/head&gt;&#34;
+                tokens_copy[j] = &#34;&lt;tail&gt; &#34; + tokens_copy[j] + &#34; &lt;/tail&gt;&#34;
                 sequence_list.append(&#34; &#34;.join(tokens_copy))
     return sequence_list</code></pre>
 </details>
@@ -835,7 +846,7 @@ True
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="common.utils.Const"><code class="flex name class">
+<dt id="src.common.utils.Const"><code class="flex name class">
 <span>class <span class="ident">Const</span></span>
 </code></dt>
 <dd>
@@ -845,8 +856,8 @@ True
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Const:
-    MODEL_NAME = &#34;bert-base-uncased&#34;
-    MAX_TOKEN_LEN = 256
+    MODEL_NAME = &#34;roberta-base&#34;
+    MAX_TOKEN_LEN = 64
     SPECIAL_TOKENS = [
         &#34;&lt;head&gt;&#34;,
         &#34;&lt;/head&gt;&#34;,
@@ -863,35 +874,58 @@ True
         &#34;&lt;time&gt;&#34;,
         &#34;&lt;hashtag&gt;&#34;,
         &#34;&lt;/hashtag&gt;&#34;,
-        # &#34;&lt;repeated&gt;&#34;,
-        # &#34;&lt;/repeated&gt;&#34;,
-        # &#34;&lt;allcaps&gt;&#34;,
-        # &#34;&lt;/allcaps&gt;&#34;,
-        # &#34;&lt;elongated&gt;&#34;,
-        # &#34;&lt;/elongated&gt;&#34;,
-        # &#34;&lt;emphasis&gt;&#34;,
-        # &#34;&lt;/emphasis&gt;&#34;,
-        # &#34;&lt;censored&gt;&#34;,
-        # &#34;&lt;/censored&gt;&#34;,
-    ]</code></pre>
+    ]
+    NORMALIZE = [
+        &#34;url&#34;,
+        &#34;email&#34;,
+        &#34;percent&#34;,
+        &#34;money&#34;,
+        &#34;phone&#34;,
+        &#34;user&#34;,
+        &#34;time&#34;,
+        &#34;url&#34;,
+        &#34;date&#34;,
+        &#34;number&#34;,
+    ]
+
+    TEXT_PROCESSOR_ARGS = dict(
+        normalize=NORMALIZE,
+        annotate={&#34;hashtag&#34;},
+        fix_html=True,
+        segmenter=&#34;twitter&#34;,
+        corrector=&#34;twitter&#34;,
+        unpack_hashtags=True,
+        unpack_contractions=True,
+        spell_correct_elong=False,
+        tokenizer=SocialTokenizer(lowercase=True).tokenize,
+        dicts=[emoticons],
+    )</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
-<dt id="common.utils.Const.MAX_TOKEN_LEN"><code class="name">var <span class="ident">MAX_TOKEN_LEN</span></code></dt>
+<dt id="src.common.utils.Const.MAX_TOKEN_LEN"><code class="name">var <span class="ident">MAX_TOKEN_LEN</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="common.utils.Const.MODEL_NAME"><code class="name">var <span class="ident">MODEL_NAME</span></code></dt>
+<dt id="src.common.utils.Const.MODEL_NAME"><code class="name">var <span class="ident">MODEL_NAME</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="common.utils.Const.SPECIAL_TOKENS"><code class="name">var <span class="ident">SPECIAL_TOKENS</span></code></dt>
+<dt id="src.common.utils.Const.NORMALIZE"><code class="name">var <span class="ident">NORMALIZE</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="src.common.utils.Const.SPECIAL_TOKENS"><code class="name">var <span class="ident">SPECIAL_TOKENS</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="src.common.utils.Const.TEXT_PROCESSOR_ARGS"><code class="name">var <span class="ident">TEXT_PROCESSOR_ARGS</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
 </dd>
-<dt id="common.utils.Label"><code class="flex name class">
+<dt id="src.common.utils.Label"><code class="flex name class">
 <span>class <span class="ident">Label</span></span>
 <span>(</span><span>name: str)</span>
 </code></dt>
@@ -924,6 +958,8 @@ True
                 &#34;O&#34;: 0,
                 &#34;B-location&#34;: 1,
                 &#34;I-location&#34;: 2,
+                &#34;L-location&#34;: 3,
+                &#34;U-location&#34;: 4,
             }
         elif self.name == &#34;REL&#34;:
             self.labels: dict[str, int] = {
@@ -946,30 +982,32 @@ True
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="common" href="index.html">common</a></code></li>
+<li><code><a title="src.common" href="index.html">src.common</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="common.utils.combine_biluo" href="#common.utils.combine_biluo">combine_biluo</a></code></li>
-<li><code><a title="common.utils.combine_subwords" href="#common.utils.combine_subwords">combine_subwords</a></code></li>
-<li><code><a title="common.utils.convert_examples_to_features" href="#common.utils.convert_examples_to_features">convert_examples_to_features</a></code></li>
-<li><code><a title="common.utils.encode_labels" href="#common.utils.encode_labels">encode_labels</a></code></li>
-<li><code><a title="common.utils.ents_to_relations" href="#common.utils.ents_to_relations">ents_to_relations</a></code></li>
+<li><code><a title="src.common.utils.combine_biluo" href="#src.common.utils.combine_biluo">combine_biluo</a></code></li>
+<li><code><a title="src.common.utils.combine_subwords" href="#src.common.utils.combine_subwords">combine_subwords</a></code></li>
+<li><code><a title="src.common.utils.convert_input" href="#src.common.utils.convert_input">convert_input</a></code></li>
+<li><code><a title="src.common.utils.encode_labels" href="#src.common.utils.encode_labels">encode_labels</a></code></li>
+<li><code><a title="src.common.utils.ents_to_relations" href="#src.common.utils.ents_to_relations">ents_to_relations</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="common.utils.Const" href="#common.utils.Const">Const</a></code></h4>
+<h4><code><a title="src.common.utils.Const" href="#src.common.utils.Const">Const</a></code></h4>
 <ul class="">
-<li><code><a title="common.utils.Const.MAX_TOKEN_LEN" href="#common.utils.Const.MAX_TOKEN_LEN">MAX_TOKEN_LEN</a></code></li>
-<li><code><a title="common.utils.Const.MODEL_NAME" href="#common.utils.Const.MODEL_NAME">MODEL_NAME</a></code></li>
-<li><code><a title="common.utils.Const.SPECIAL_TOKENS" href="#common.utils.Const.SPECIAL_TOKENS">SPECIAL_TOKENS</a></code></li>
+<li><code><a title="src.common.utils.Const.MAX_TOKEN_LEN" href="#src.common.utils.Const.MAX_TOKEN_LEN">MAX_TOKEN_LEN</a></code></li>
+<li><code><a title="src.common.utils.Const.MODEL_NAME" href="#src.common.utils.Const.MODEL_NAME">MODEL_NAME</a></code></li>
+<li><code><a title="src.common.utils.Const.NORMALIZE" href="#src.common.utils.Const.NORMALIZE">NORMALIZE</a></code></li>
+<li><code><a title="src.common.utils.Const.SPECIAL_TOKENS" href="#src.common.utils.Const.SPECIAL_TOKENS">SPECIAL_TOKENS</a></code></li>
+<li><code><a title="src.common.utils.Const.TEXT_PROCESSOR_ARGS" href="#src.common.utils.Const.TEXT_PROCESSOR_ARGS">TEXT_PROCESSOR_ARGS</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="common.utils.Label" href="#common.utils.Label">Label</a></code></h4>
+<h4><code><a title="src.common.utils.Label" href="#src.common.utils.Label">Label</a></code></h4>
 </li>
 </ul>
 </li>
