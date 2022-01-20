@@ -29,7 +29,7 @@ lint:
 
 run:
 ## run: Train ger and rel model over 5 fixed seeds.
-	poetry run ${PYTHON} --model ger --seed ${SEEDS} --batch_size 4 \
+	poetry run ${PYTHON} -m src.run --model ger --seed ${SEEDS} --batch_size 4 \
 	&& poetry run ${PYTHON} -m src.run --model rel --seed ${SEEDS}
 
 dev:
