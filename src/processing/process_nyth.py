@@ -2,6 +2,7 @@ import jsonlines
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from spacy.lang.en import English
 from src.common.utils import Const
 from typing import Union
 
@@ -11,6 +12,9 @@ class NYTReader:
         self.path = path
         with jsonlines.open(self.path, "r") as file:
             self.relations = [line for line in file]  # type: ignore
+
+        self.nlp = English()
+        self.nlp.add_pipe("sentencizer")
 
     def read(self) -> pd.DataFrame:
         self.get_locations()
@@ -91,37 +95,45 @@ class NYTReader:
                 tail_idx = sentence.rfind(tail + " ")
 
             sentence = self.add_tag(sentence, tail_idx, tail_len, "tail")
-            sentence = sentence[: Const.MAX_TOKEN_LEN]
 
-            if any(
-                x not in sentence for x in ["<head>", "</head>", "<tail>", "</tail>"]
-            ):
-                relations.append(
-                    {"relation": np.nan, "sentence": np.nan, "bag_label": np.nan}
-                )
-            else:
-                # ensure no empty entities
-                assert all(
-                    x not in sentence for x in ["<head></head>", "<tail></tail>"]
-                )
-                relations.append(
-                    {
-                        "relation": relation,
-                        "sentence": sentence,
-                        "bag_label": item["bag_label"],
-                    }
-                )
+            for sent in self.nlp(sentence).sents:
+                sent = sent.text[: Const.MAX_TOKEN_LEN]
+
+                if any(
+                    x not in sent for x in ["<head>", "</head>", "<tail>", "</tail>"]
+                ):
+                    relations.append(
+                        {"relation": np.nan, "sentence": np.nan, "bag_label": np.nan}
+                    )
+                else:
+                    # ensure no empty entities
+                    assert all(
+                        x not in sent for x in ["<head></head>", "<tail></tail>"]
+                    )
+                    relations.append(
+                        {
+                            "relation": relation,
+                            "sentence": sent,
+                            "bag_label": item["bag_label"],
+                        }
+                    )
         self.relations = relations
 
 
 def main():
     reader = NYTReader(Path("data/rel_data/train.json"))
     relations = reader.read()
-    relations.to_csv("./data/rel_data/relations.csv", index=False)
+    relations.sample(frac=0.1).to_csv("./data/rel_data/relations.csv", index=False)
 
     reader = NYTReader(Path("data/rel_data/test.json"))
     relations_test = reader.read()
-    relations_test.to_csv("./data/rel_data/relations_test.csv", index=False)
+
+    reader = NYTReader(Path("data/rel_data/na_rest.json"))
+    na_rest = reader.read()
+    relations_test = relations_test.append(na_rest.sample(800))
+    relations_test.sample(frac=0.1).to_csv(
+        "./data/rel_data/relations_test.csv", index=False
+    )
 
 
 if __name__ == "__main__":
