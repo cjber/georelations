@@ -28,24 +28,22 @@ class WNUTDataset(Dataset[dict[str, torch.Tensor]]):
 
         if path == "train":
             wnut = load_dataset(
-                "wnut_17", split={"train": "train", "validation": "validation"}  # type: ignore
+                "wnut_17", split={"train": "train", "validation": "validation"}
             )
-            wnut = concatenate_datasets([wnut["train"], wnut["validation"]])  # type: ignore
+            wnut = concatenate_datasets([wnut["train"], wnut["validation"]])
         elif path == "test":
             wnut = load_dataset("wnut_17", split="test")
         else:
             raise ValueError
-        wnut = wnut.map(self.use_loc).map(self.normalise).map(self.to_biluo)  # type: ignore
+        wnut = wnut.map(self.use_loc).map(self.normalise).map(self.to_biluo)
         locs = wnut.filter(
             lambda example: any(x in [1, 4] for x in example["ner_tags"])
         )
         # reduce imbalance by keeping 1/8 of sentences w/o locations
         all_other = wnut.filter(
             lambda example: all(x not in [1, 4] for x in example["ner_tags"])
-        ).shard(  # type: ignore
-            8, 0
-        )
-        self.data = concatenate_datasets([locs, all_other])  # type: ignore
+        ).shard(8, 0)
+        self.data = concatenate_datasets([locs, all_other])
 
     def __len__(self) -> int:
         return len(self.data)

@@ -10,8 +10,8 @@ tdict = dict[str, Tensor]
 
 
 class Const:
-    MODEL_NAME = "roberta-base"
-    MAX_TOKEN_LEN = 64
+    MODEL_NAME = "cardiffnlp/twitter-roberta-base"
+    MAX_TOKEN_LEN = 128
     SPECIAL_TOKENS = [
         "<head>",
         "</head>",
