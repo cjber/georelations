@@ -5,8 +5,7 @@ from src.pl_metric.seqeval_f1 import Seqeval
 from torch import Tensor
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from transformers import AutoModelForTokenClassification
-from transformers import AutoTokenizer
+from transformers import AutoModelForTokenClassification, AutoTokenizer
 from typing import Any, Union
 
 
@@ -16,9 +15,9 @@ class GERModel(pl.LightningModule):
         self.optim = AdamW
         self.scheduler = ReduceLROnPlateau
 
-        self.train_metric = Seqeval()
-        self.val_metric = Seqeval()
-        self.test_metric = Seqeval()
+        self.train_f1 = Seqeval()
+        self.val_f1 = Seqeval()
+        self.test_f1 = Seqeval()
 
         self.model = AutoModelForTokenClassification.from_pretrained(
             Const.MODEL_NAME,
@@ -81,27 +80,22 @@ class GERModel(pl.LightningModule):
     def training_step(self, batch: tdict, batch_idx: int) -> Tensor:
         step_out = self.step(batch, batch_idx)
         loss = step_out["loss"]
-        train_f1 = self.train_metric(
-            preds=step_out["preds"],
-            targets=batch["labels"],
-        ).pop("overall_f1")
-        self.log_dict({"train_loss": loss, "train_f1": train_f1}, prog_bar=False)
+        self.train_f1(preds=step_out["preds"], targets=batch["labels"])
+        self.log_dict({"train_loss": loss, "train_f1": self.train_f1}, prog_bar=False)
         return loss
 
     def validation_step(self, batch: tdict, batch_idx: int) -> Tensor:
         step_out = self.step(batch, batch_idx)
         loss = step_out["loss"]
-        val_f1 = self.val_metric(preds=step_out["preds"], targets=batch["labels"]).pop(
-            "overall_f1"
-        )
-        self.log_dict({"val_loss": loss, "val_f1": val_f1}, prog_bar=True)
+        self.val_f1(preds=step_out["preds"], targets=batch["labels"])
+        self.log_dict({"val_loss": loss, "val_f1": self.val_f1}, prog_bar=True)
         return loss
 
     def test_step(self, batch: tdict, batch_idx: int) -> Tensor:
         step_out = self.step(batch, batch_idx)
         loss = step_out["loss"]
-        test_f1 = self.test_metric(step_out["preds"], batch["labels"]).pop("overall_f1")
-        self.log_dict({"test_loss": loss, "test_f1": test_f1})
+        self.test_f1(step_out["preds"], batch["labels"])
+        self.log_dict({"test_loss": loss, "test_f1": self.test_f1})
         return loss
 
     def configure_optimizers(self) -> dict[str, Any]:
