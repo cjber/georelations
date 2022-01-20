@@ -1,4 +1,3 @@
-import pandas as pd
 import torch
 from seqeval.metrics import classification_report
 from seqeval.scheme import BILOU
@@ -7,52 +6,41 @@ from torchmetrics import Metric
 
 
 class Seqeval(Metric):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, dist_sync_on_step=False) -> None:
+        super().__init__(dist_sync_on_step=dist_sync_on_step)
 
-        self.add_state("targets", default=[])
-        self.add_state("preds", default=[])
-
-        self.targets = []
-        self.preds = []
+        self.add_state("f1s", default=torch.tensor([]))
 
     def update(self, preds: torch.Tensor, targets: torch.Tensor) -> None:
-        self.preds.append(preds.flatten())
-        self.targets.append(targets.flatten())
-
-    def compute(self) -> dict:
-        pred_bioul = []
-        target_bioul = []
-        for pred_seq, target_seq in zip(self.preds, self.targets):
-            pred_seq = pred_seq.cpu().numpy()
-            target_seq = target_seq.squeeze().cpu().numpy()
-
+        pred_biluo = []
+        target_biluo = []
+        for i, _ in enumerate(targets):
             true_labels_idx: list = [
-                idx for idx, lab in enumerate(target_seq) if lab != -100
+                idx for idx, lab in enumerate(targets[i]) if lab != -100
             ]
-
-            pred_bioul.append(
-                [Label("GER").idx[pred] for pred in pred_seq[true_labels_idx]]
+            pred_biluo.append(
+                [Label("GER").idx[pred.item()] for pred in preds[i, true_labels_idx]]
             )
-            target_bioul.append(
-                [Label("GER").idx[target] for target in target_seq[true_labels_idx]]
+            target_biluo.append(
+                [
+                    Label("GER").idx[target.item()]
+                    for target in targets[i, true_labels_idx]
+                ]
             )
-
         report: dict = classification_report(
-            y_true=target_bioul,
-            y_pred=pred_bioul,
+            y_true=target_biluo,
+            y_pred=pred_biluo,
             mode="strict",
             scheme=BILOU,
             output_dict=True,
             zero_division=1,
-        )  # type: ignore
+        )
+        self.f1s = torch.cat(
+            (
+                self.f1s,
+                torch.tensor([report.pop("micro avg")["f1-score"]], device=self.f1s.get_device()),
+            )
+        )
 
-        report.pop("macro avg")
-        report.pop("weighted avg")
-        overall_score = report.pop("micro avg")
-
-        report["overall_precision"] = overall_score["precision"]
-        report["overall_recall"] = overall_score["recall"]
-        report["overall_f1"] = overall_score["f1-score"]
-
-        return pd.json_normalize(report, sep="_").to_dict(orient="records")[0]  # type: ignore
+    def compute(self) -> dict:
+        return self.f1s.mean()
