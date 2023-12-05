@@ -11,7 +11,7 @@ class NYTReader:
     def __init__(self, path: Union[str, Path]) -> None:
         self.path = path
         with jsonlines.open(self.path, "r") as file:
-            self.relations = [line for line in file]  # type: ignore
+            self.relations = list(file)
 
         self.nlp = English()
         self.nlp.add_pipe("sentencizer")

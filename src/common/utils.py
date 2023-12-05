@@ -240,7 +240,7 @@ def combine_biluo(tokens: list[str], tags: list[str]) -> tuple[list[str], list[s
         if idx + 1 < len(tags_biluo) and tag[0] == "B":
             i = 1
             while tags_biluo[idx + i][0] not in ["B", "O"]:
-                tokens_biluo[idx] = tokens_biluo[idx] + " " + tokens_biluo[idx + i]
+                tokens_biluo[idx] = f"{tokens_biluo[idx]} {tokens_biluo[idx + i]}"
                 i += 1
                 if idx + i == len(tokens_biluo):
                     break
@@ -297,8 +297,8 @@ def ents_to_relations(tokens: list[str], tags: list[str]) -> Union[list[str], No
         for j in loc_idxs:
             if i != j:
                 tokens_copy = tokens.copy()
-                tokens_copy[i] = "<head> " + tokens_copy[i] + " </head>"
-                tokens_copy[j] = "<tail> " + tokens_copy[j] + " </tail>"
+                tokens_copy[i] = f"<head> {tokens_copy[i]} </head>"
+                tokens_copy[j] = f"<tail> {tokens_copy[j]} </tail>"
                 sequence_list.append(" ".join(tokens_copy))
     return sequence_list
 

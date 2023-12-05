@@ -44,17 +44,12 @@ class RelationEnsemble(pl.LightningModule):
                     x not in text for x in ["<head>", "</head>", "<tail>", "</tail>"]
                 ):
                     continue
-                item = {}
-                item["sentence"] = text
-
-                features = convert_input(
+                item = {"sentence": text}
+                if features := convert_input(
                     item,
                     max_seq_len=Const.MAX_TOKEN_LEN,
                     tokenizer=self.tokenizer,
-                )
-
-                # truncation may remove tail/head so ignore
-                if features:
+                ):
                     rel_out = self.rel_model(
                         features["input_ids"].unsqueeze(0).to("cuda"),
                         features["attention_mask"].unsqueeze(0).to("cuda"),
