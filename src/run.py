@@ -85,11 +85,7 @@ def run(
     )
     model: pl.LightningModule = pl_model()
     callbacks: list[Callback] = build_callbacks()
-    csv_logger = CSVLogger(
-        save_dir="csv_logs",
-        name="seed_" + str(seed),
-        version=name,
-    )
+    csv_logger = CSVLogger(save_dir="csv_logs", name=f"seed_{seed}", version=name)
 
     if args.fast_dev_run:
         trainer_kwargs = {"gpus": None, "auto_select_gpus": False}
@@ -112,9 +108,7 @@ def run(
 
     if not args.fast_dev_run:
         test = trainer.test(model=model, ckpt_path="best", datamodule=datamodule)
-        pd.DataFrame(test).to_csv(
-            "csv_logs/seed_" + str(seed) + "_" + name + "_test.csv"
-        )
+        pd.DataFrame(test).to_csv(f"csv_logs/seed_{seed}_{name}_test.csv")
         csv_logger.save()
 
     if args.save_to_hub:

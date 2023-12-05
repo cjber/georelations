@@ -22,9 +22,7 @@ class JSONLDataset(Dataset):
 
         data = []
         for doc in nlp.pipe(self.data):
-            for sent in doc.sents:
-                data.append(sent.text)
-
+            data.extend(sent.text for sent in doc.sents)
         self.data = data
         self.data = [self.normalise(line) for line in self.data]
         self.tokenizer = tokenizer.from_pretrained(
